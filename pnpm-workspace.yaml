@@ -1,0 +1,13 @@
+# pnpm 11 reads its settings from this file, not from the "pnpm" field in
+# package.json — that field is silently ignored and warns on install.
+#
+# esbuild needs its install script to place the platform-specific binary that
+# Vite shells out to. Without this, a clean `pnpm install` fails with
+# ERR_PNPM_IGNORED_BUILDS on a cold store — which is exactly what CI saw, while a
+# warm local store hid it (ERR-007).
+#
+# Listed explicitly rather than allowing all builds: an allowlist is a claim
+# about which dependencies run arbitrary code, and should be re-examined rather
+# than granted wholesale.
+allowBuilds:
+  esbuild: true
