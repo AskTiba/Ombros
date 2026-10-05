@@ -18,17 +18,23 @@
 | Terrain heightfield builder — `buildHeightfieldGeometry()`           | `src/features/terrain/heightfield.test.ts` (37 tests) | 2026-10-05 |
 | Test collection scoped to `src/` only (ERR-003 fixed)                | 4 files / 61 tests / 12s                              | 2026-10-05 |
 
-> 72 tests across 4 files, all green. No Three.js scene is mounted in the app yet —
+> 90 tests across 5 files, all green. No Three.js scene is mounted in the app yet —
 > `ScenePlaceholder` stands in. See "Planned Next" for the exact next step.
 
 ---
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit     | Exact Next Action                                                                                                                                                                                                                                                                                | Files                                           |
-| ------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| STORY-001 — Standing 3D scene over Kampala | Unit 1c-i (next) | Write a failing test for `readDemBinary()`: parse a `kampala-dem.bin` header (rows, cols, extent, min/max elevation, quantisation scale) into the `{ samples, rows, cols, extent }` grid that `buildHeightfieldGeometry` consumes. Then the COG range-fetch + clip script that produces the file | `src/features/terrain/demBinary.ts` (to create) |
+| Story/Task                                 | Current Unit       | Exact Next Action                                                                                                                                                                                                                                                                                                                                     | Files                               |
+| ------------------------------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| STORY-001 — Standing 3D scene over Kampala | Unit 1c-iii (next) | Write `scripts/fetch-dem.mjs`: range-request the GLO-30 COG header for `Copernicus_DSM_COG_10_N00_00_E032_00_DEM`, read only the byte ranges covering Kampala, reproject to metres, resample to the uniform 643 x 746 grid, quantise to uint16, write `public/data/kampala-dem.bin`. Then verify the written file round-trips through `readDemBinary` | `scripts/fetch-dem.mjs` (to create) |
 
+> **Unit 1c-i is done.** `readDemBinary()` decodes the 48-byte-header, uint16-payload DEM format into the
+> exact shape `buildHeightfieldGeometry` consumes. Pure — no `fetch`, no DOM. Validates structure
+> (magic, version, dims, declared length, extent, band); deliberately does **not** re-check uniform
+> cell size, since that invariant already lives in the builder (ADR-006). Quantisation step is
+> `range / 65535` — ~3mm on a 200m band, two orders of magnitude below the 30m source resolution.
+>
 > **Unit 1c-ii is done.** `metresPerDegreeLatitude`/`metresPerDegreeLongitude` reproject WGS84 properly, replacing a mean-radius sphere that was 125m out north-south (ERR-004, ADR-007). The study extent is now **19,258.00m E-W x 22,336.01m N-S**, so the 30m grid is **643 x 746 = 479,678 vertices** — still past the 16-bit index limit.
 >
 > **Unit 1b is done.** `buildHeightfieldGeometry()` is a pure function returning a

@@ -121,6 +121,34 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001c-i — Quantised DEM binary — 2026-10-05
+
+**Q:** How did you halve the DEM payload, and what did it cost you in precision?
+
+**Direct answer:** uint16 samples instead of float32: 1.83MB down to 0.92MB for 479,678 samples. The step is `range / 65535`, and since the observed elevation band is a few hundred metres, that is about 3mm — two orders of magnitude below the 30m source resolution. The point I care about is not that 3mm is small, it is that quantisation can never be the _explanation_ for a visual artefact. That matters because we already have to disclose that the terrain is 30m while the flood model ran on 5m (RISK-007); a second, self-inflicted source of imprecision would muddy an honesty claim.
+
+**Q:** Why store the elevation band in the header instead of hardcoding it?
+
+**Direct answer:** Because a fixed band wastes range. If I hardcoded, say, 900–1500m to cover Kampala's relief, the step would be 9mm. Measuring the actual band gives 3mm for free, and it adapts to whatever the DEM really contains instead of to my guess about it. I also export `MAX_DEM_QUANTISATION_STEP_METERS = 0.01` as the threshold where uint16 stops being transparent — past that width, the format should move to uint32 rather than quietly degrade.
+
+**Q:** What does your binary header actually validate, and what does it deliberately skip?
+
+**Direct answer:** Magic, version, dimensions, declared byte length against actual length, extent finiteness, and that the elevation band is not inverted. It deliberately does _not_ re-check uniform cell size — that invariant already lives in `buildHeightfieldGeometry` (ADR-006), and asserting it in both places means two copies to keep in sync when one changes. The parser's contract is "this is a well-formed grid"; the builder's is "this is a loadable grid."
+
+**Q:** You check `buffer.byteLength !== declaredBytes` rather than `>=`. Why strict equality?
+
+**Direct answer:** Because both failure directions matter. `<` is truncation, which would otherwise parse as a short grid and render terrain that stops mid-city with no error. `>` is trailing garbage or a version skew, which means the file is not what its header claims. Strict equality catches both with one comparison.
+
+**Q:** You added a guard for a zero-width elevation band, then deleted it. Why?
+
+**Direct answer:** Because it was dead code. The decoding is `min + (value / 65535) * range`, and when `range` is 0 the product is 0, so every sample already decodes to `min` exactly. The `range === 0` branch changed no result, and the test I wrote to justify it would have passed with or without it. A guard that cannot fail is worse than no guard, because the next reader assumes it is protecting something. I kept the test — it pins the behaviour against a future refactor to `(value - min) / range` — but rewrote the comment so it claims only what is true.
+
+**Q:** How do you test a binary decoder?
+
+**Direct answer:** The test builds its own encoder inline rather than importing a writer from the source module. That is deliberate: if the reader and the writer shared a codec helper, a bug in that helper would cancel out and both tests would pass. The test states the format independently from the byte layout, so the two implementations have to actually agree. There is also an integration test that feeds the decoded grid straight into `buildHeightfieldGeometry` and asserts the vertex count, which catches drift between what the writer emits and what the builder expects.
+
+---
+
 ### STORY-001a — Project bootstrap and data verification — 2026-10-05
 
 **Q:** You built a flood visualization app. Did you implement a flood simulation?
