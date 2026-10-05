@@ -18,17 +18,19 @@
 | Terrain heightfield builder — `buildHeightfieldGeometry()`           | `src/features/terrain/heightfield.test.ts` (37 tests) | 2026-10-05 |
 | Test collection scoped to `src/` only (ERR-003 fixed)                | 4 files / 61 tests / 12s                              | 2026-10-05 |
 
-> 61 tests across 4 files, all green. No Three.js scene is mounted in the app yet —
+> 72 tests across 4 files, all green. No Three.js scene is mounted in the app yet —
 > `ScenePlaceholder` stands in. See "Planned Next" for the exact next step.
 
 ---
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit   | Exact Next Action                                                                                                                                                                                                                                                                                            | Files                                                                                |
-| ------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| STORY-001 — Standing 3D scene over Kampala | Unit 1c (next) | Write a failing test for `loadHeightfieldFromBinary()`: parse a `kampala-dem.bin` header (rows, cols, extent, min/max elevation, quantisation scale) into the `{ samples, rows, cols, extent }` grid that `buildHeightfieldGeometry` consumes. Then the COG range-fetch + clip script that produces the file | `src/features/terrain/demBinary.ts` (to create), `scripts/fetch-dem.mjs` (to create) |
+| Story/Task                                 | Current Unit     | Exact Next Action                                                                                                                                                                                                                                                                                | Files                                           |
+| ------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| STORY-001 — Standing 3D scene over Kampala | Unit 1c-i (next) | Write a failing test for `readDemBinary()`: parse a `kampala-dem.bin` header (rows, cols, extent, min/max elevation, quantisation scale) into the `{ samples, rows, cols, extent }` grid that `buildHeightfieldGeometry` consumes. Then the COG range-fetch + clip script that produces the file | `src/features/terrain/demBinary.ts` (to create) |
 
+> **Unit 1c-ii is done.** `metresPerDegreeLatitude`/`metresPerDegreeLongitude` reproject WGS84 properly, replacing a mean-radius sphere that was 125m out north-south (ERR-004, ADR-007). The study extent is now **19,258.00m E-W x 22,336.01m N-S**, so the 30m grid is **643 x 746 = 479,678 vertices** — still past the 16-bit index limit.
+>
 > **Unit 1b is done.** `buildHeightfieldGeometry()` is a pure function returning a
 > `THREE.BufferGeometry` with no renderer attached — in metres, Y-up, origin at the extent centroid
 > (ADR-005) — so the whole 3D pipeline stays verifiable attribute-by-attribute in jsdom.

@@ -61,6 +61,19 @@
 
 ---
 
+## ERR-004 — 2026-10-05 — Mean-radius sphere put Kampala's north-south extent 125m out
+
+| Field          | Content                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Context**    | Unit 1c-ii — adding `metresPerDegreeLatitude`/`metresPerDegreeLongitude` so the DEM fetch script can reproject WGS84 into the metre space the terrain mesh uses (ADR-005).                                                                                                                                                                                                                                                  |
+| **Symptom**    | Not a crash. `src/lib/geo.ts` multiplied every degree span by a single `EARTH_RADIUS_M = 6_371_008.8`, so `boundsHeightMeters()` reported 22,461.41m for the published extent where WGS84 gives 22,336.01m. The existing tests passed, because they only asserted loose bounds (`> 18_000`, `< 28_000`) and that height exceeded width.                                                                                     |
+| **Root cause** | A sphere is a reasonable stand-in at continental scale and a bad one at city scale. The two axes are wrong by opposite amounts — +125m north-south, −21m east-west — because a real ellipsoid's meridian radius and parallel radius diverge with latitude while a sphere's radius does not. The error grows as the extent does, and nothing in the code flagged it.                                                         |
+| **Resolution** | Replaced the sphere with WGS84 (`a = 6_378_137`, `1/f = 298.257223563`): meridian metres-per-degree from M(φ) = a(1−e²)/(1−e²sin²φ)^1.5, parallel metres-per-degree from N(φ)cos(φ) = a·cos(φ)/√(1−e²sin²φ). Extent is now 19,258.00m × 22,336.01m. Tightened the bounds tests to ~500m-wide ranges plus exact-value regression pins so the sphere model cannot return. Requires an ADR — see ADR-007.                      |
+| **Prevention** | Assert tight tolerances on geospatial maths, not order-of-magnitude ones. A test that only proves "bigger than X" and "smaller than Y" will pass through a systematic error of many percent. Pin exact expected values so a modelling change has to be deliberate. Also: a heightfield fixture that hardcodes grid dimensions derived from a projection encodes that projection silently — derive them in the test instead. |
+| **Related**    | ADR-005, ADR-006, ADR-007                                                                                                                                                                                                                                                                                                                                                                                                   |
+
+---
+
 ## Pre-flight Data Verification Log
 
 > Verification steps run before trusting any external dataset. Results recorded here so a later

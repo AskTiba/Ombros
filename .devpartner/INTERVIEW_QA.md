@@ -97,6 +97,30 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001c-ii — WGS84 reprojection — 2026-10-05
+
+**Q:** Why not just use a sphere of mean Earth radius to convert degrees to metres?
+
+**Direct answer:** Because the error is systematic and, at city scale, large. Multiplying every degree by R = 6,371,008.8m put Kampala's north-south extent 125m too long and its east-west extent 21m too short — opposite signs, because a real ellipsoid's meridian and parallel radii diverge with latitude while a sphere's radius does not. Over 22km the two axes drifted about 146m apart. This was in shipped code that passed its tests.
+
+**Q:** Your tests passed with the wrong model. How did you catch it?
+
+**Direct answer:** The tests asserted `boundsHeightMeters() > 18_000 && < 28_000`. That range is 10,000m wide, so a 125m error is invisible to it. It only surfaced because the DEM fetch needed per-degree scale factors and I computed the WGS84 values to compare. An order-of-magnitude assertion cannot detect a percent-level error — that is the actual lesson. I tightened them to ~500m ranges and added exact-value regression pins.
+
+**Q:** How much error can a flood risk tool tolerate in its projection?
+
+**Direct answer:** For the terrain mesh, almost none of it matters — a 0.56% scale error on a 30m cell is 17cm, invisible. It matters the moment we report a distance or an exposed population figure to a planner, and it compounds with anything derived from the grid. Given the tool's stated purpose is decision-ready numbers, "invisible on screen" is not the bar.
+
+**Q:** Why does longitude need a latitude argument but latitude does not?
+
+**Direct answer:** Because of cos(φ). A degree of longitude is 111.3km at the equator but 78.8km at 45°, a 29% difference, so a latitude-independent constant misplaces features by a third of a kilometre per degree. A degree of latitude barely moves — the meridian radius varies about 0.6% pole to equator — so one value per extent is enough. That asymmetry is exactly why a single `EARTH_RADIUS_M` could never be right for both.
+
+**Q:** Why does your test file derive the grid dimensions instead of hardcoding 643 x 746?
+
+**Direct answer:** Because I hardcoded `642 x 750` and it encoded the sphere extent. When I fixed the projection the test failed — and it failed for the right reason, because 643 x 746 is genuinely the correct 30m grid now. But I only knew that because I rechecked the arithmetic by hand. If I had not, I would have "fixed" the test by loosening it and baked the 146m axis error in permanently. A fixture derived from another calculation should recompute from the shared source.
+
+---
+
 ### STORY-001a — Project bootstrap and data verification — 2026-10-05
 
 **Q:** You built a flood visualization app. Did you implement a flood simulation?
