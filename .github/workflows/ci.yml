@@ -1,0 +1,116 @@
+name: CI
+
+# Mirrors the local commit gate in the same order:
+#   format check -> lint -> type-check -> test -> build
+# Any divergence between this file and what you run before committing is a gap.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Format, lint, types, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # Node 24 satisfies Vite 7's ^20.19.0 || >=22.12.0 requirement. The
+      # engine-floor job separately proves the declared minimum still builds,
+      # so the primary job can use a known-good version.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 11.16.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      # Collects only src/ — see vitest.config.ts exclude. Asserting the
+      # count here because ERR-003 shipped a suite of 1,498 tests (145 of them
+      # from a nested node_modules) that all "passed" locally.
+      - name: Test
+        run: pnpm test
+
+      - name: Verify test collection scope
+        run: |
+          count=$(pnpm vitest list --filesOnly | grep -c '^src/')
+          echo "Test files collected from src/: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No tests collected from src/ — check vitest exclude patterns"
+            exit 1
+          fi
+
+      - name: Build
+        run: pnpm build
+
+      - name: Upload test results artifact
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: test-results
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  engine-floor:
+    name: Node engine floor (${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20.19.0', '24']
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 11.16.0
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Proves package.json `engines` is not a lie: 20.19.0 is Vite 7's real
+      # floor. If this job fails, the declared engine range is wrong.
+      - name: Install and build on the declared floor
+        run: pnpm build
+
+  # A `dem-contract` job lands with Unit 1c-iii, alongside the script it
+# guards. It will assert scripts/fetch-dem.mjs exists and parses, but
+# deliberately will NOT assert the upstream COG is reachable — a flaky
+# network dependency must not be able to redden CI.
+#
+# Deliberately absent for now: adding it before the script exists would make
+# main permanently red, which trains people to ignore red.

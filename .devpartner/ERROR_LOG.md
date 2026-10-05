@@ -48,6 +48,19 @@
 
 ---
 
+## ERR-005 — 2026-10-05 — `engines.node` claimed `>=20.0.0` but Vite 7 needs `^20.19.0`
+
+| Field          | Content                                                                                                                                                                                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Context**    | Unit 1c scaffold — CI setup. Detected the stack by probing `package.json`, `pnpm-lock.yaml`, `vite.config.ts`, `vitest.config.ts`, `.prettierrc`, `eslint.config.js`.                                                                                                                                |
+| **Symptom**    | Not a crash. `package.json` declared `node >=20.0.0`, but the installed Vite 7.3.6 declares `^20.19.0                                                                                                                                                                                                |     | >=22.12.0`. A contributor or CI runner on Node 20.0–20.18 would resolve a "supported" version that cannot run `pnpm dev`or`pnpm build`.                                                                                                                                                    |
+| **Root cause** | The engine range was written as "a plausible-looking minimum" rather than read off the tool that actually gates the build. Nothing checks the claim: `engines` is advisory to npm, so a wrong range fails late and confusingly, usually as an obscure syntax error inside Vite or an esbuild binary. |
+| **Resolution** | Corrected to `^20.19.0                                                                                                                                                                                                                                                                               |     | >=22.12.0`, matching Vite's own declaration. Added an `engine-floor`CI job on a`[20.19.0, 24]`matrix that runs`pnpm build`, so the declared floor is now a verified claim rather than an assertion — if a dependency raises its floor, CI says so instead of a contributor discovering it. |
+| **Prevention** | When a config value can be read from a dependency's own manifest, read it. For `engines` specifically, back the declared range with a CI job that builds on the stated minimum; otherwise it is a comment.                                                                                           |
+| **Related**    | CI conventions in PROJECT_STATE.md                                                                                                                                                                                                                                                                   |
+
+---
+
 ## ERR-003 — 2026-10-05 — Vitest collected 145 dependency test suites from a nested `node_modules`
 
 | Field          | Content                                                                                                                                                                                                                                                                                                                                                                                          |

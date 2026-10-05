@@ -149,6 +149,34 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001d — CI pipeline — 2026-10-05
+
+**Q:** What does "CI mirrors the commit gate" actually mean in practice?
+
+**Direct answer:** The checks must be the same commands in the same order, because a pipeline that differs from what you run locally will eventually pass something you would have rejected, or fail something you just fixed. Here that is format check → lint → type-check → test → build. I also checked that every command the workflow calls actually exists in `package.json` before emitting it — a CI file referencing a script that was never written is a pipeline that is red on the first run and gets ignored after that.
+
+**Q:** You added a CI step that checks the test count. Isn't that paranoid?
+
+**Direct answer:** It is the direct result of a real incident. My test suite once reported 1,498 tests across 149 files, 145 of which were Zod's own suites pulled in from a nested `node_modules` because I had replaced Vitest's `exclude` defaults instead of spreading them. Everything passed locally for a session. A grep for `^src/` on the collected file list is one line and makes that class of failure loud, so it stays.
+
+**Q:** You found that `engines.node` was wrong. How?
+
+**Direct answer:** I probed the actual manifests rather than reading my own config. `vite@7.3.6` declares `^20.19.0 || >=22.12.0`; my `package.json` said `>=20.0.0`. The gap is Node 20.0 through 20.18 — versions that satisfy my declaration and cannot run the build. `engines` is advisory to npm, so nothing catches this; it fails late as an obscure error inside a bundler. I corrected the range and added a matrix job that builds on `20.19.0` and `24`, so the floor is now verified instead of asserted.
+
+**Q:** Why run the engine floor job in CI rather than trusting the `engines` field?
+
+**Direct answer:** Because a declared range is a comment until something enforces it. Dependencies raise their floors over time; when one does, the floor job fails and tells me the declared range needs updating. Without it, I find out when a contributor's build breaks for no visible reason.
+
+**Q:** You validated the workflow with `actionlint`. What did it catch?
+
+**Direct answer:** A real bug: I had written `node-version: ${{ matrix.node }}` in the `quality` job, which has no matrix. The expression evaluates to empty, and `setup-node` would silently fall back to whatever default the runner ships — so the primary job's Node version would not have been what the file claimed. `actionlint` type-checks expressions against the job's context and flagged it. Worth noting the tool only helps if you run it: my own YAML sanity check parsed fine and reported nothing.
+
+**Q:** Did you add a job that fetches the DEM in CI?
+
+**Direct answer:** No, deliberately. The DEM script does not exist yet, so wiring the job now would make `main` permanently red — and a permanently red pipeline is how people learn to ignore red. It lands with Unit 1c-iii alongside the script. And even then I would only assert the script exists and parses, never that the upstream COG responds: a network dependency should never be able to redden CI.
+
+---
+
 ### STORY-001a — Project bootstrap and data verification — 2026-10-05
 
 **Q:** You built a flood visualization app. Did you implement a flood simulation?

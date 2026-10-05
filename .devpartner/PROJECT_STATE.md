@@ -92,16 +92,16 @@ decision artifact a planner or insurer will pay for.
 
 ### Stack
 
-| Layer       | Technology                            | Version            | Notes                                                                |
-| ----------- | ------------------------------------- | ------------------ | -------------------------------------------------------------------- |
-| Runtime     | Node                                  | ≥20                | pnpm 11.16                                                           |
-| Framework   | React                                 | 19.3               | Vite 7, TypeScript 5.9 strict                                        |
-| 3D          | Three.js + @react-three/fiber + drei  | 0.182 / 9.8 / 10.7 | R3F over raw Three.js — declarative scene graph fits React data flow |
-| Styling     | Tailwind CSS                          | 4.3                | CSS-first tokens, via `@tailwindcss/vite`                            |
-| Data layer  | PostgreSQL + Drizzle ORM              | 16 / 0.4x          | Matches existing portfolio convention                                |
-| Validation  | Zod                                   | 4.6                |                                                                      |
-| Testing     | Vitest 3.2 + RTL 16 + Playwright 1.57 |                    | Integration-first. MSW added when the first network call exists.     |
-| Lint/format | ESLint 9 flat + Prettier 3            |                    | typescript-eslint 8.71                                               |
+| Layer       | Technology                            | Version               | Notes                                                                                           |
+| ----------- | ------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------- |
+| Runtime     | Node                                  | ^20.19.0 \| >=22.12.0 | pnpm 11.16. Engine floor is Vite 7's, not an arbitrary choice (CI `engine-floor` job proves it) |
+| Framework   | React                                 | 19.3                  | Vite 7, TypeScript 5.9 strict                                                                   |
+| 3D          | Three.js + @react-three/fiber + drei  | 0.182 / 9.8 / 10.7    | R3F over raw Three.js — declarative scene graph fits React data flow                            |
+| Styling     | Tailwind CSS                          | 4.3                   | CSS-first tokens, via `@tailwindcss/vite`                                                       |
+| Data layer  | PostgreSQL + Drizzle ORM              | 16 / 0.4x             | Matches existing portfolio convention                                                           |
+| Validation  | Zod                                   | 4.6                   |                                                                                                 |
+| Testing     | Vitest 3.2 + RTL 16 + Playwright 1.57 |                       | Integration-first. MSW added when the first network call exists.                                |
+| Lint/format | ESLint 9 flat + Prettier 3            |                       | typescript-eslint 8.71                                                                          |
 
 ### Project Structure
 
@@ -148,6 +148,9 @@ pnpm format       # prettier --write .
   critical journey (load scene → select sub-county → read risk).
 - **Commit message format:** conventional commits, description ≤12 words
 - **Branch strategy:** GitHub Flow — `main` + `feature/*`, `fix/*`, `chore/*`
+- **CI mirrors the commit gate exactly:** format check → lint → type-check → test → build,
+  in that order. `.github/workflows/ci.yml` must not diverge from what runs locally; a
+  divergence is a gap, not a convenience. `actionlint` clean is part of the gate.
 
 ### Environment Setup
 
