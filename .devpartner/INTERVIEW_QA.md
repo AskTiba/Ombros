@@ -149,6 +149,34 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001e — DEM pipeline and a broken type-check gate — 2026-10-05
+
+**Q:** Your `typecheck` script had been passing for weeks. How did you find out it checked nothing?
+
+**Direct answer:** I made a call-site mistake during a refactor — dropped an argument — and expected `pnpm typecheck` to fail. It didn't. Instead `pnpm test` failed, because Vitest's transform type-errored on the same file. The script was `tsc --noEmit` against the root `tsconfig.json`, which is solution-style: it contains only `references`, with no `files` or `include`. `tsc --listFiles` on it printed zero files. `tsc --noEmit` on a config that matches nothing exits 0, which looks exactly like success. The actual program is in `tsconfig.app.json` — 263 files including tests — and only `tsc -b`, which `build` happened to call, ever reached it.
+
+**Q:** How do you prove a gate works before trusting it?
+
+**Direct answer:** Break something on purpose. I appended `const c: string = computeDemGrid(300, 200).cols` to a module and measured: old gate exit 0 with no output, new gate exit 2 with `TS2322`, clean file exit 0 again. One subtlety — I initially piped tsc into `head`, and `$?` reported head's status. Exit codes have to be read without a pipe or the proof is worthless. The fix was `tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit` rather than `tsc -b`, because `-b` trusts its `.tsbuildinfo` cache and a pre-commit gate should never depend on a cache being valid.
+
+**Q:** How do you know a resampling step is geographically correct, not just internally consistent?
+
+**Direct answer:** Round-tripping proves almost nothing — a transposed or flipped raster decodes perfectly. Three things gave real confidence. First, I read the file's own `ModelTiepoint` rather than trusting the filename. My initial probe misread the six tiepoint values as `[i, j, x, y]` and got the origin as `(1, 0)` instead of `(32, 1)`, which nearly led me to conclude the tile didn't contain Kampala at all. Second, I cross-checked against `geotiff`'s own bilinear resample of the same window — Pearson 0.997, mean absolute difference 1.67m over 479,678 samples, residual explained by my grid anchoring to exact WGS84 bounds while geotiff anchors to the window pixel grid. Two independent paths agreeing is evidence; a writer and its own reader agreeing is circular. Third, and most decisive: the grid's peak is 1317.6m at 0.3466N, 32.605E — Kololo Hill, the highest ground in Kampala. One sentence of domain knowledge caught what 116 passing tests could not.
+
+**Q:** Why use `geotiff` instead of reading the byte ranges yourself?
+
+**Direct answer:** Because I checked before deciding. The `Compression` tag is 8 — Deflate — with `Predictor` 3, a floating-point predictor, on 1024x1024 tiles. Hand-decoding that is a project in itself, and a subtle bug in it would produce a plausible but wrong terrain. So `geotiff` handles I/O and decompression, and I kept all the resampling in a unit-tested module. Notably `geotiff` offers `resampleMethod: 'bilinear'` and I deliberately passed `nearest` instead: letting geotiff resample _and_ resampling myself would mean two independent resamples of the same data, and a bug in either would be very hard to see in the output.
+
+**Q:** Your tests failed three times in a row during this unit. Were those real bugs?
+
+**Direct answer:** Two were my test fixtures and one was a real bug, and telling them apart mattered. The first two failures were fixtures: I'd georeferenced a synthetic window at the study extent's north edge while the module anchors latitude at the south edge, so every sample fell outside the window and silently clamped to the edge value — tests that would have passed while asserting nothing. The third was a genuine design flaw I introduced during a refactor: `targetVertexToLonLat` was taking the step size from the study extent while taking the vertex count from the grid spec, so those two had to agree exactly. That constraint was invisible to callers and would have been violated by any different footprint. The fix was to let the spec own the geometry and the extent own only the anchor. I only found it because the test used a spec deliberately smaller than the study extent, which is the only kind of fixture that can catch it.
+
+**Q:** What does "1 arcsecond is not 30m" actually change?
+
+**Direct answer:** It bounds what we may claim. A degree of longitude at 0.3N is ~30.92m while a degree of latitude is ~30.71m, so the source is genuinely anisotropic in metres and the published "30m" is a rounded figure. That has two consequences: the resample is a ~3% stretch, which is why bilinear beats nearest — nearest would terrace the terrain into visible steps along the stretched axis — and any precision claim has to be stated against ~30.7m horizontal resolution, not 30m. It's the same discipline as the quantisation claim in ADR-008: state the real number rather than the flattering one.
+
+---
+
 ### STORY-001d — CI pipeline — 2026-10-05
 
 **Q:** What does "CI mirrors the commit gate" actually mean in practice?

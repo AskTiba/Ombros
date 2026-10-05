@@ -57,3 +57,35 @@
 | 3D is progressive enhancement over a 2D accessible path, never the only path | Yes     | 2026-10-05 | ADR-002                     |
 | Core product requires zero paid API credentials                              | Yes     | 2026-10-05 | PROJECT_STATE → Environment |
 | Kampala only for v1                                                          | Yes     | 2026-10-05 | DECISIONS → Scope           |
+
+### S-EVOL-006 — 2026-10-05 — A gate that cannot fail is worse than no gate
+
+Two of the three commits in this session found a check reporting green while verifying
+nothing. `tsc --noEmit` against a solution-style root tsconfig compiled zero files
+(ERR-006), and Vitest was collecting 145 dependency suites (ERR-003). Both passed
+continuously and nobody noticed, because a green check produces no output.
+
+Rule adopted: **when a check is added or changed, break something on purpose and confirm the
+check catches it before believing a green run.** Appending one mistyped line
+(`const c: string = computeGrid().cols`) and confirming exit 2 takes ten seconds. Exit codes
+must be read without a pipe, since `$?` after `| head` is head's status, not tsc's.
+
+### S-EVOL-007 — 2026-10-05 — Verify a data pipeline geographically, not just structurally
+
+The DEM round-tripped through `readDemBinary` cleanly, and that proved nothing about whether
+the terrain was the right way up: a transposed or flipped raster decodes perfectly. Three
+checks actually established correctness, and all three are cheap:
+
+- **Read the source header** instead of trusting the filename. The tile name says `N00_00`;
+  only the `ModelTiepoint` proves the extent is 0-1N, and it is.
+- **Cross-check against an independent implementation.** `geotiff`'s own bilinear resample of
+  the same window agreed at Pearson 0.997. Agreement between two independent code paths is
+  evidence; agreement between a writer and its reader is circular.
+- **Look for a feature you know.** The grid peak lands at 1317.6m on Kololo Hill, the highest
+  ground in Kampala. No amount of structural checking would have caught a flip; one sentence
+  of domain knowledge did.
+
+Rule adopted: **for any geospatial pipeline, name the real-world landmark the output should
+peak on, and check it before moving on.** Also: read the file's own georeferencing tags
+rather than parsing its name. My first TIFF probe misread the tiepoint as `(1, 0)` instead of
+`(32, 1)` and nearly led to the conclusion that the tile did not cover Kampala.

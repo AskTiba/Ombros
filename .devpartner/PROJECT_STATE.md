@@ -16,18 +16,35 @@
 | Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)              | `src/lib/geo.test.ts` (12 tests)                      | 2026-10-05 |
 | Flood scenario model + depth classes (`src/features/flood/types.ts`) | `src/features/flood/types.test.ts` (9 tests)          | 2026-10-05 |
 | Terrain heightfield builder — `buildHeightfieldGeometry()`           | `src/features/terrain/heightfield.test.ts` (37 tests) | 2026-10-05 |
-| Test collection scoped to `src/` only (ERR-003 fixed)                | 4 files / 61 tests / 12s                              | 2026-10-05 |
+| Test collection scoped to `src/` only (ERR-003 fixed)                | 6 files / 116 tests / 16s                             | 2026-10-05 |
+| Type-check gate actually checks files (ERR-006 fixed)                | `tsc --listFiles` 263; canary proven to fail          | 2026-10-05 |
+| CI mirrors the commit gate, order and all                            | `actionlint` clean; local gate green                  | 2026-10-05 |
+| DEM fetched from the live COG, resampled, quantised, round-tripped   | 643x746, 0.91MB, step 2.93mm, peak at Kololo Hill     | 2026-10-05 |
 
-> 90 tests across 5 files, all green. No Three.js scene is mounted in the app yet —
-> `ScenePlaceholder` stands in. See "Planned Next" for the exact next step.
+> 116 tests across 6 files, all green. `public/data/kampala-dem.bin` is written and gitignored —
+> regenerate with `node scripts/fetch-dem.mjs` (needs Node 22.18+/24 for type stripping).
+> No Three.js scene is mounted in the app yet; `ScenePlaceholder` stands in.
+> See "Planned Next" for the exact next step.
 
 ---
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit       | Exact Next Action                                                                                                                                                                                                                                                                                                                                     | Files                               |
-| ------------------------------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| STORY-001 — Standing 3D scene over Kampala | Unit 1c-iii (next) | Write `scripts/fetch-dem.mjs`: range-request the GLO-30 COG header for `Copernicus_DSM_COG_10_N00_00_E032_00_DEM`, read only the byte ranges covering Kampala, reproject to metres, resample to the uniform 643 x 746 grid, quantise to uint16, write `public/data/kampala-dem.bin`. Then verify the written file round-trips through `readDemBinary` | `scripts/fetch-dem.mjs` (to create) |
+| Story/Task                                 | Current Unit       | Exact Next Action                                                                                                                                                                                                                                                                                                                                             | Files                                                          |
+| ------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| STORY-001 — Standing 3D scene over Kampala | Unit 1c-iii (done) | **Shipped.** `scripts/fetch-dem.mjs` range-requests the COG, reads only the 626x730 px window covering Kampala, resamples to the uniform 643x746 grid, quantises to uint16, writes `public/data/kampala-dem.bin` and verifies the round trip through `readDemBinary`. All geometry lives in the tested `demResample.ts` (26 tests), not the script (ADR-010). | `scripts/fetch-dem.mjs`, `src/features/terrain/demResample.ts` |
+
+> **Next is Unit 1d — adaptive quality tiers**, with three measured tiers including load-time
+> grid decimation, since a 30m grid is heavy for the mid-range Android this is built for.
+
+> **Unit 1c-iii is done.** The source tile was verified rather than assumed: `N00_00_E032_00`
+> covers 32-33E / 0-1N and so does contain the study extent; samples are float32 EGM2008; the
+> grid is 1 arcsecond, i.e. **~30.71m N-S and ~30.92m E-W, not 30m** — that asymmetry is real and
+> is disclosed rather than hidden (RISK-007). The resample is anchored to the exact WGS84 bounds
+> while `geotiff` anchors to the window pixel grid, so the two implementations agree at
+> **Pearson 0.997** (mean diff 1.67m) rather than exactly. The grid peak lands at 1317.6m on
+> **Kololo Hill**, which is the highest ground in Kampala — the geographic check that a
+> round trip cannot give you, since a transposed or flipped raster decodes perfectly.
 
 > **Unit 1c-i is done.** `readDemBinary()` decodes the 48-byte-header, uint16-payload DEM format into the
 > exact shape `buildHeightfieldGeometry` consumes. Pure — no `fetch`, no DOM. Validates structure
@@ -62,13 +79,12 @@
 
 ## Planned Next (Prioritized)
 
-1. Unit 1c — DEM binary format + `fetch-dem.mjs` producing `public/data/kampala-dem.bin`
-2. Unit 1d — adaptive quality tiers (3 tiers, measured), including load-time grid decimation
-3. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002)
-4. Unit 2 — flood extent classes → animated water surface
-5. Unit 3 — accessible 2D depth view
-6. Unit 4 — sub-county risk readout
-7. Unit 5 — shareable risk report (the monetization unit)
+1. Unit 1d — adaptive quality tiers (3 tiers, measured), including load-time grid decimation
+2. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002)
+3. Unit 2 — flood extent classes → animated water surface
+4. Unit 3 — accessible 2D depth view
+5. Unit 4 — sub-county risk readout
+6. Unit 5 — shareable risk report (the monetization unit)
 
 ---
 

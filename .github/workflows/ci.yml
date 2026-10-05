@@ -107,10 +107,38 @@ jobs:
       - name: Install and build on the declared floor
         run: pnpm build
 
-  # A `dem-contract` job lands with Unit 1c-iii, alongside the script it
-# guards. It will assert scripts/fetch-dem.mjs exists and parses, but
-# deliberately will NOT assert the upstream COG is reachable — a flaky
-# network dependency must not be able to redden CI.
-#
-# Deliberately absent for now: adding it before the script exists would make
-# main permanently red, which trains people to ignore red.
+  dem-contract:
+    name: DEM fetch script contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 11.16.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7.0.0
+        with:
+          # Node 24, not the declared 20.19 floor: the script imports `src/*.ts`
+          # directly and needs native type stripping, which does not exist in
+          # Node 20. Deliberately duplicated from the quality job's rationale.
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify the DEM fetch script parses
+        # Only a parse check. Asserting that the upstream COG still answers would
+        # let a network dependency redden CI, and a CI failure nobody can fix by
+        # changing code trains people to ignore CI.
+        run: node --check scripts/fetch-dem.mjs
+
+      - name: Verify the fetch plan without touching the network
+        # Catches the class of bug where the grid dimensions or the resample
+        # signature drift apart from the module they call — an arithmetic or
+        # argument-order change fails here in 5 seconds instead of after a
+        # 36MB download.
+        run: node scripts/fetch-dem.mjs --dry-run

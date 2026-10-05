@@ -60,8 +60,8 @@ export interface HeightfieldOptions {
  * Permitted relative difference between the x and z cell sizes.
  *
  * Cell dims are derived as `round(extent / cell) + 1`, so integer rounding
- * always leaves a little drift. At the 30m Kampala grid (642 × 750) the drift
- * is ~0.08%; 0.5% absorbs that while still rejecting any grid that would
+ * always leaves a little drift. At the 30m Kampala grid (643 × 746) the drift
+ * is ~0.05%; 0.5% absorbs that while still rejecting any grid that would
  * genuinely stretch the terrain north-south.
  */
 export const MAX_CELL_SIZE_DRIFT = 0.005;
@@ -104,8 +104,9 @@ const validate = (options: HeightfieldOptions): Required<HeightfieldOptions> => 
   }
 
   // Uniform cell size is the invariant that matters. The study extent is
-  // ~19,237m E-W by ~22,461m N-S, so `rows === cols` would force two different
-  // cell sizes and stretch the terrain north-south. Uniform cells do not.
+  // ~19,258m E-W by ~22,336m N-S (ADR-007), so `rows === cols` would force two
+  // different cell sizes and stretch the terrain north-south. Uniform cells
+  // do not.
   const cellX = widthMeters / (cols - 1);
   const cellZ = depthMeters / (rows - 1);
   const drift = Math.abs(cellX - cellZ) / Math.max(cellX, cellZ);
@@ -179,7 +180,7 @@ export function buildHeightfieldGeometry(options: HeightfieldOptions): BufferGeo
     }
   }
 
-  // A 30m grid over the study extent is 481,500 vertices. Writing those into a
+  // A 30m grid over the study extent is 479,678 vertices. Writing those into a
   // Uint16Array wraps past index 65,535 and produces a corrupt mesh with no
   // error thrown anywhere, so the index width is chosen explicitly.
   const IndexArray = vertexCount > MAX_UINT16_VERTICES ? Uint32Array : Uint16Array;
