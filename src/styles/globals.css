@@ -1,0 +1,64 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens for Ombros.
+ *
+ * Palette intent: the product is read in daylight and at night by people who
+ * need a hazard to be unambiguous. Depth classes carry the risk signal, so
+ * they use a single-hue sequential ramp (light = shallow, saturated = deep)
+ * rather than a rainbow, which would imply categorical differences that the
+ * underlying data does not support (ADR-003).
+ */
+
+@theme {
+  --color-terrain-low: #2f3a2f;
+  --color-terrain-high: #6f7f63;
+  --color-water-100: #9fd4e8;
+  --color-water-200: #5bb4d4;
+  --color-water-300: #2d8fc0;
+  --color-surface-base: #0d1117;
+  --color-surface-raised: #161b22;
+  --color-surface-overlay: #1c2430;
+  --color-text-primary: #e6edf3;
+  --color-text-secondary: #9aa7b4;
+  --color-accent: #4cc2ff;
+  --color-hazard: #f0883e;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-surface-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Respect the OS reduced-motion setting globally. The 3D scene reads this
+ * via matchMedia to stop camera easing and water animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

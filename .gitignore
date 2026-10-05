@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.vite/
+.turbo/
+*.tsbuildinfo
+
+# Data — fetched by script, never committed (see ERROR_LOG pre-flight log)
+public/data/*
+!public/data/.gitkeep
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Editor
+.DS_Store
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+Thumbs.db
+
+# Vercel / deploy
+.vercel/
