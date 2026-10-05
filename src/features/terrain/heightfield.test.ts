@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { BufferAttribute, BufferGeometry } from 'three';
-import { buildHeightfieldGeometry } from '@/features/terrain/heightfield';
+import {
+  buildHeightfieldGeometry,
+  MAX_CELL_SIZE_DRIFT,
+} from '@/features/terrain/heightfield';
 import { boundsHeightMeters, boundsWidthMeters } from '@/lib/geo';
 
 interface GridOptions {
@@ -402,23 +405,47 @@ describe('buildHeightfieldGeometry', () => {
   });
 
   describe('the real Kampala grid', () => {
+    // Dims are derived from the extent rather than hardcoded, using the same
+    // `round(extent / cell) + 1` rule Unit 1c's fetch script uses. Hardcoding
+    // them silently encoded the old sphere-model extent: when `geo.ts` moved
+    // to WGS84 this test failed for the right reason (the grid genuinely
+    // needed 643 x 746) but only by accident of me rechecking the arithmetic.
+    const kampalaGridDims = (cellMeters: number) => ({
+      rows: Math.round(boundsHeightMeters() / cellMeters) + 1,
+      cols: Math.round(boundsWidthMeters() / cellMeters) + 1,
+    });
+
     it('accepts the uniform 30m grid the DEM fetch will produce', () => {
-      // The published study extent is ~19,237m E-W by ~22,461m N-S — an aspect
-      // of 0.856. Unit 1c derives dims as round(extent / cell) + 1, giving
-      // 642 x 750. This asserts the approved invariant accepts the grid we
-      // will actually build rather than rejecting it as "non-square".
+      // The WGS84 study extent is ~19,258m E-W by ~22,336m N-S — an aspect of
+      // 0.862, so a 30m grid is 643 x 746. This asserts the approved invariant
+      // accepts the grid we will actually build rather than rejecting it as
+      // "non-square".
+      const { rows, cols } = kampalaGridDims(30);
       const geometry = buildHeightfieldGeometry({
-        samples: flatSamples(642 * 750),
-        rows: 750,
-        cols: 642,
+        samples: flatSamples(rows * cols),
+        rows,
+        cols,
         extent: {
           widthMeters: boundsWidthMeters(),
           depthMeters: boundsHeightMeters(),
         },
       });
       expect((geometry.getAttribute('position') as BufferAttribute).count).toBe(
-        642 * 750,
+        rows * cols,
       );
+    });
+
+    it('derives a grid that stays within cell-size tolerance at every tier', () => {
+      // The three adaptive quality tiers Unit 1d will offer. Each must survive
+      // the uniform-cell invariant, or a tier would be unloadable.
+      for (const cellMeters of [30, 60, 120]) {
+        const { rows, cols } = kampalaGridDims(cellMeters);
+        const cellX = boundsWidthMeters() / (cols - 1);
+        const cellZ = boundsHeightMeters() / (rows - 1);
+        expect(Math.abs(cellX - cellZ) / Math.max(cellX, cellZ)).toBeLessThanOrEqual(
+          MAX_CELL_SIZE_DRIFT,
+        );
+      }
     });
 
     it('rejects a square grid over the real Kampala extent', () => {
