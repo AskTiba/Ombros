@@ -5,6 +5,8 @@ import {
   containsLonLat,
   KAMPALA_BOUNDS,
   lonLatToNdc,
+  metresPerDegreeLatitude,
+  metresPerDegreeLongitude,
 } from '@/lib/geo';
 
 describe('geo', () => {
@@ -16,11 +18,79 @@ describe('geo', () => {
     });
 
     it('produces plausible metric dimensions for Kampala', () => {
-      // Rough sanity check: the bounds span roughly 19km E-W by 22km N-S.
-      expect(boundsWidthMeters()).toBeGreaterThan(15_000);
-      expect(boundsWidthMeters()).toBeLessThan(25_000);
-      expect(boundsHeightMeters()).toBeGreaterThan(18_000);
-      expect(boundsHeightMeters()).toBeLessThan(28_000);
+      // The WGS84 extent is ~19.26km E-W by ~22.34km N-S.
+      expect(boundsWidthMeters()).toBeGreaterThan(19_000);
+      expect(boundsWidthMeters()).toBeLessThan(19_500);
+      expect(boundsHeightMeters()).toBeGreaterThan(22_000);
+      expect(boundsHeightMeters()).toBeLessThan(22_700);
+    });
+
+    it('does not inherit the sphere model error on the north-south axis', () => {
+      // Guards a regression back to EARTH_RADIUS_M. That constant produced
+      // 22,461m here — 125m too long. The value is pinned so the sphere
+      // approximation cannot quietly return.
+      expect(boundsHeightMeters()).toBeCloseTo(22_336.0, 0);
+    });
+
+    it('does not inherit the sphere model error on the east-west axis', () => {
+      expect(boundsWidthMeters()).toBeCloseTo(19_258.0, 0);
+    });
+  });
+
+  describe('metresPerDegree', () => {
+    // Reference values from the WGS84 ellipsoid. A sphere of mean radius is
+    // wrong by ~0.56% north-south and ~0.11% east-west over Kampala's extent,
+    // and in opposite directions, so the two axes drift apart by ~146m over
+    // 22km. That matters when the terrain grid is built in metres (ADR-005)
+    // and distances are reported to planners.
+    it('reports the correct metres per degree of latitude at the equator', () => {
+      expect(metresPerDegreeLatitude(0)).toBeCloseTo(110_574.276, 2);
+    });
+
+    it('reports the correct metres per degree of latitude at Kampala', () => {
+      expect(metresPerDegreeLatitude(0.308)).toBeCloseTo(110_574.34, 1);
+    });
+
+    it('reports the correct metres per degree of longitude at the equator', () => {
+      expect(metresPerDegreeLongitude(0)).toBeCloseTo(111_319.491, 2);
+    });
+
+    it('reports the correct metres per degree of longitude at 45 degrees', () => {
+      // The sphere model cannot express this: it is latitude-independent.
+      expect(metresPerDegreeLongitude(45)).toBeCloseTo(78_846.835, 2);
+    });
+
+    it('contracts east-west metres per degree toward the poles', () => {
+      expect(metresPerDegreeLongitude(0)).toBeGreaterThan(metresPerDegreeLongitude(30));
+      expect(metresPerDegreeLongitude(30)).toBeGreaterThan(metresPerDegreeLongitude(60));
+    });
+
+    it('varies latitude metres per degree far less than longitude', () => {
+      // Meridian radius is nearly constant over a city's extent; the parallel
+      // radius shrinks with cos(lat). Only the longitude axis needs the
+      // caller's latitude.
+      const equator = metresPerDegreeLatitude(0);
+      const kampala = metresPerDegreeLatitude(0.308);
+      expect(Math.abs(kampala - equator) / equator).toBeLessThan(0.001);
+    });
+
+    it('rejects a latitude outside the valid range', () => {
+      expect(() => metresPerDegreeLatitude(91)).toThrow(/latitude/);
+      expect(() => metresPerDegreeLongitude(-91)).toThrow(/latitude/);
+    });
+
+    it('produces bounds dimensions that agree with the per-degree helpers', () => {
+      const midLat = (KAMPALA_BOUNDS.north + KAMPALA_BOUNDS.south) / 2;
+      const latSpan = KAMPALA_BOUNDS.north - KAMPALA_BOUNDS.south;
+      const lonSpan = KAMPALA_BOUNDS.east - KAMPALA_BOUNDS.west;
+      expect(boundsHeightMeters()).toBeCloseTo(
+        metresPerDegreeLatitude(midLat) * latSpan,
+        3,
+      );
+      expect(boundsWidthMeters()).toBeCloseTo(
+        metresPerDegreeLongitude(midLat) * lonSpan,
+        3,
+      );
     });
   });
 
