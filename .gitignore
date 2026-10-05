@@ -3,10 +3,11 @@ node_modules/
 .pnp
 .pnp.js
 
-# Skill vendor directory (BOOT.md Section A) installs its own deps
+# The vendored skill directory (BOOT.md Section A) installs its own deps.
+# .opencode/.gitignore covers these too; repeated here so a nested
+# node_modules can never leak into test collection (ERR-003) if that
+# file is removed.
 .opencode/node_modules/
-.opencode/package-lock.json
-.opencode/pnpm-lock.yaml
 
 # Build output
 dist/
