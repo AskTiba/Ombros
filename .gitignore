@@ -3,6 +3,11 @@ node_modules/
 .pnp
 .pnp.js
 
+# Skill vendor directory (BOOT.md Section A) installs its own deps
+.opencode/node_modules/
+.opencode/package-lock.json
+.opencode/pnpm-lock.yaml
+
 # Build output
 dist/
 build/
