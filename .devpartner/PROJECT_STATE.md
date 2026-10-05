@@ -8,24 +8,39 @@
 
 ## What Currently Works
 
-| Feature / Component                                               | Verified by                           | Date       |
-| ----------------------------------------------------------------- | ------------------------------------- | ---------- |
-| Repo initialized + `.devpartner/` state files seeded              | `git init`, files on disk             | 2026-10-05 |
-| Domain research: problem validated, public data sources confirmed | Web research (see ROADMAP → Evidence) | 2026-10-05 |
+| Feature / Component                                                  | Verified by                                           | Date       |
+| -------------------------------------------------------------------- | ----------------------------------------------------- | ---------- |
+| Repo initialized + `.devpartner/` state files seeded                 | `git init`, files on disk                             | 2026-10-05 |
+| Domain research: problem validated, public data sources confirmed    | Web research (see ROADMAP → Evidence)                 | 2026-10-05 |
+| Toolchain scaffold: Vite + React 19 + strict TS + Vitest + ESLint    | `pnpm build`, `pnpm typecheck`, `pnpm lint`           | 2026-10-05 |
+| Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)              | `src/lib/geo.test.ts` (12 tests)                      | 2026-10-05 |
+| Flood scenario model + depth classes (`src/features/flood/types.ts`) | `src/features/flood/types.test.ts` (9 tests)          | 2026-10-05 |
+| Terrain heightfield builder — `buildHeightfieldGeometry()`           | `src/features/terrain/heightfield.test.ts` (37 tests) | 2026-10-05 |
+| Test collection scoped to `src/` only (ERR-003 fixed)                | 4 files / 61 tests / 12s                              | 2026-10-05 |
 
-> No application code yet. This is a greenfield project at Unit 0.
+> 61 tests across 4 files, all green. No Three.js scene is mounted in the app yet —
+> `ScenePlaceholder` stands in. See "Planned Next" for the exact next step.
 
 ---
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit   | Exact Next Action                                                                                                                                         | Files                                             |
-| ------------------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| STORY-001 — Standing 3D scene over Kampala | Unit 1b (next) | Write failing `src/features/terrain/heightfield.test.ts` asserting vertex count from grid dims, Y from elevation samples, and a throw on non-square grids | `src/features/terrain/heightfield.ts` (to create) |
+| Story/Task                                 | Current Unit   | Exact Next Action                                                                                                                                                                                                                                                                                            | Files                                                                                |
+| ------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| STORY-001 — Standing 3D scene over Kampala | Unit 1c (next) | Write a failing test for `loadHeightfieldFromBinary()`: parse a `kampala-dem.bin` header (rows, cols, extent, min/max elevation, quantisation scale) into the `{ samples, rows, cols, extent }` grid that `buildHeightfieldGeometry` consumes. Then the COG range-fetch + clip script that produces the file | `src/features/terrain/demBinary.ts` (to create), `scripts/fetch-dem.mjs` (to create) |
 
-> **Scaffold is done.** Unit 1a covered toolchain setup plus the flood scenario model and geo
-> helpers. Unit 1b is the terrain heightfield builder — a pure function producing a
-> `THREE.BufferGeometry`, deliberately renderer-free so it is testable in jsdom.
+> **Unit 1b is done.** `buildHeightfieldGeometry()` is a pure function returning a
+> `THREE.BufferGeometry` with no renderer attached — in metres, Y-up, origin at the extent centroid
+> (ADR-005) — so the whole 3D pipeline stays verifiable attribute-by-attribute in jsdom.
+>
+> The grid invariant is **uniform cell size**, not a square cell count (ADR-006): the published
+> extent is ~19,237m E-W by ~22,461m N-S, so a 30m grid is 642 × 750 = 481,500 vertices — which
+> also exceeds the 16-bit index limit and forces a `Uint32Array` index buffer. Both facts are
+> pinned by tests, along with axis orientation and triangle winding.
+>
+> A 30m grid is heavy for the target market (mid-range Android). The 1c binary format should
+> therefore store quantised elevations, and Unit 1d's quality tiers will need to decimate the grid
+> at load time rather than only at fetch time.
 
 ---
 
@@ -39,9 +54,9 @@
 
 ## Planned Next (Prioritized)
 
-1. Unit 1b — `buildHeightfieldGeometry()` pure heightfield builder + tests
-2. Unit 1c — DEM fetch/clip script producing `public/data/kampala-dem.bin`
-3. Unit 1d — adaptive quality tiers (3 tiers, measured)
+1. Unit 1c — DEM binary format + `fetch-dem.mjs` producing `public/data/kampala-dem.bin`
+2. Unit 1d — adaptive quality tiers (3 tiers, measured), including load-time grid decimation
+3. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002)
 4. Unit 2 — flood extent classes → animated water surface
 5. Unit 3 — accessible 2D depth view
 6. Unit 4 — sub-county risk readout

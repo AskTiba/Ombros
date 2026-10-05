@@ -67,26 +67,26 @@ We are not inventing the method; we are applying it where the money and the risk
 
 ## MVP Scope (MoSCoW)
 
-| Priority            | Feature                                                                    | Status        | Sprint                                              |
-| ------------------- | -------------------------------------------------------------------------- | ------------- | --------------------------------------------------- |
-| **Must Have**       | Terrain from Copernicus GLO-30 DEM as a 3D heightfield (ADR-004)           | ⏸ Not started | 1                                                   |
-|                     | Published flood extent classes → animated water surface (ADR-003)          | ⏸ Not started | 1                                                   |
-|                     | OSM building footprints extruded against terrain                           | ⏸ Not started | 1                                                   |
-|                     | Scenario control: rainfall depth × duration                                | ⏸ Not started | 2                                                   |
-|                     | Click-to-query sub-county risk readout (depth, extent, exposed population) | ⏸ Not started | 2                                                   |
-|                     | Drainage intervention what-if overlay                                      | ⏸ Not started | 3                                                   |
-|                     | Shareable single-sub-county risk report                                    | ⏸ Not started | 3                                                   |
-|                     | 2D fallback path, fully accessible                                         | ⏸ Not started | 1                                                   |
-| **Should Have**     | Sentinel-1 observed-flood validation overlay                               | ⏸ Not started | 4                                                   |
-|                     | CHIRPS historical rainfall replay                                          | ⏸ Not started | 4                                                   |
-|                     | Saved scenarios + PDF report generation                                    | ⏸ Not started | 4                                                   |
-| **Could Have**      | Own MCP server so an agent can query district risk                         | ⏸ Not started | 5                                                   |
-|                     | Jinja / Mbale extension                                                    | ⏸ Not started | 6                                                   |
-|                     | Public share links with OG imagery                                         | ⏸ Not started | 5                                                   |
-| **Won't Have (v1)** | Real CFD / live hydraulic solver                                           | ❌ Excluded   | ADR-001                                             |
-|                     | Mobile-money settlement, payments, invoicing                               | ❌ Excluded   | Not v1; monetization starts as a direct report sale |
-|                     | Multi-city                                                                 | ❌ Excluded   | Needs Kampala proven first                          |
-|                     | User accounts / auth                                                       | ❌ Excluded   | Reports served via signed share links for v1        |
+| Priority            | Feature                                                                    | Status                                                                          | Sprint                                              |
+| ------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **Must Have**       | Terrain from Copernicus GLO-30 DEM as a 3D heightfield (ADR-004)           | 🟡 In progress — heightfield builder done (ADR-005, ADR-006); DEM fetch pending | 1                                                   |
+|                     | Published flood extent classes → animated water surface (ADR-003)          | ⏸ Not started                                                                   | 1                                                   |
+|                     | OSM building footprints extruded against terrain                           | ⏸ Not started                                                                   | 1                                                   |
+|                     | Scenario control: rainfall depth × duration                                | ⏸ Not started                                                                   | 2                                                   |
+|                     | Click-to-query sub-county risk readout (depth, extent, exposed population) | ⏸ Not started                                                                   | 2                                                   |
+|                     | Drainage intervention what-if overlay                                      | ⏸ Not started                                                                   | 3                                                   |
+|                     | Shareable single-sub-county risk report                                    | ⏸ Not started                                                                   | 3                                                   |
+|                     | 2D fallback path, fully accessible                                         | ⏸ Not started                                                                   | 1                                                   |
+| **Should Have**     | Sentinel-1 observed-flood validation overlay                               | ⏸ Not started                                                                   | 4                                                   |
+|                     | CHIRPS historical rainfall replay                                          | ⏸ Not started                                                                   | 4                                                   |
+|                     | Saved scenarios + PDF report generation                                    | ⏸ Not started                                                                   | 4                                                   |
+| **Could Have**      | Own MCP server so an agent can query district risk                         | ⏸ Not started                                                                   | 5                                                   |
+|                     | Jinja / Mbale extension                                                    | ⏸ Not started                                                                   | 6                                                   |
+|                     | Public share links with OG imagery                                         | ⏸ Not started                                                                   | 5                                                   |
+| **Won't Have (v1)** | Real CFD / live hydraulic solver                                           | ❌ Excluded                                                                     | ADR-001                                             |
+|                     | Mobile-money settlement, payments, invoicing                               | ❌ Excluded                                                                     | Not v1; monetization starts as a direct report sale |
+|                     | Multi-city                                                                 | ❌ Excluded                                                                     | Needs Kampala proven first                          |
+|                     | User accounts / auth                                                       | ❌ Excluded                                                                     | Reports served via signed share links for v1        |
 
 ---
 
@@ -107,18 +107,18 @@ We are not inventing the method; we are applying it where the money and the risk
 > mid-range Android over mobile data — if the 3D view doesn't degrade gracefully, there is no
 > product.
 
-| Requirement                     | Target                                           | Measurement method                          | Current baseline     |
-| ------------------------------- | ------------------------------------------------ | ------------------------------------------- | -------------------- |
-| 3D scene draw calls             | ≤60                                              | `renderer.info.render.calls` in dev overlay | _(not measured yet)_ |
-| 3D scene frame rate             | ≥30fps mid-range Android, ≥60 desktop            | `renderer.info` + Playwright perf trace     | _(not measured yet)_ |
-| Adaptive quality tiers          | 3 tiers, auto-selected on measured perf          | Playwright, throttled CPU                   | _(not measured yet)_ |
-| DEM + grid payload (first load) | ≤3MB compressed, progressive                     | Bundle/network panel                        | _(not measured yet)_ |
-| 2D fallback LCP                 | <2.5s on 4G                                      | Lighthouse                                  | _(not measured yet)_ |
-| 3D view time-to-interactive     | <5s on mid-range Android                         | Lighthouse throttled                        | _(not measured yet)_ |
-| API response (p95)              | <200ms                                           | Load test                                   | _(not measured yet)_ |
-| Concurrent users                | 500                                              | Load test                                   | _(not measured yet)_ |
-| Accessibility                   | WCAG 2.2 AA, canvas has equivalent keyboard path | axe-core + manual audit                     | _(not measured yet)_ |
-| Zero paid credentials           | Core product runs with no API keys               | CI env check                                | _(not measured yet)_ |
+| Requirement                     | Target                                           | Measurement method                          | Current baseline                                                                                                            |
+| ------------------------------- | ------------------------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 3D scene draw calls             | ≤60                                              | `renderer.info.render.calls` in dev overlay | _(not measured yet)_                                                                                                        |
+| 3D scene frame rate             | ≥30fps mid-range Android, ≥60 desktop            | `renderer.info` + Playwright perf trace     | _(not measured yet)_                                                                                                        |
+| Adaptive quality tiers          | 3 tiers, auto-selected on measured perf          | Playwright, throttled CPU                   | _(not measured yet)_                                                                                                        |
+| DEM + grid payload (first load) | ≤3MB compressed, progressive                     | Bundle/network panel                        | **Projected 0.92MB** for a 30m grid quantised to uint16 (642×750 = 481,500 samples). Unverified until 1c produces the file. |
+| 2D fallback LCP                 | <2.5s on 4G                                      | Lighthouse                                  | _(not measured yet)_                                                                                                        |
+| 3D view time-to-interactive     | <5s on mid-range Android                         | Lighthouse throttled                        | _(not measured yet)_                                                                                                        |
+| API response (p95)              | <200ms                                           | Load test                                   | _(not measured yet)_                                                                                                        |
+| Concurrent users                | 500                                              | Load test                                   | _(not measured yet)_                                                                                                        |
+| Accessibility                   | WCAG 2.2 AA, canvas has equivalent keyboard path | axe-core + manual audit                     | _(not measured yet)_                                                                                                        |
+| Zero paid credentials           | Core product runs with no API keys               | CI env check                                | _(not measured yet)_                                                                                                        |
 
 ### Performance Log
 

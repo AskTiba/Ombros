@@ -32,6 +32,71 @@
 
 ## Story Entries (Chronological)
 
+### STORY-001b — Renderer-free heightfield geometry — 2026-10-05
+
+**Q:** Why is `buildHeightfieldGeometry()` a plain function instead of a React component or a hook?
+
+**Direct answer:** Because jsdom has no WebGL context. If geometry construction touched
+`WebGLRenderer`, a canvas, or `document`, it would be untestable in CI and I would only discover it
+was broken when someone opened the page. Returning a `BufferGeometry` from a pure function lets me
+assert vertex count, axis orientation, and index buffer width in a unit test that runs in 12
+seconds. The R3F component owns the renderer; the builder never sees one.
+
+**Q:** What actually breaks if you get the triangle winding order wrong?
+
+**Direct answer:** Nothing throws. The mesh still has the right vertex count and the right
+positions, and every assertion you would naturally reach for still passes. But the triangles face
+downward, Three's back-face culling hides them, and the terrain is invisible from above — which is
+where you always view it. My test asserts that a flat grid yields normals of exactly `(0, 1, 0)`,
+which catches a reversed winding with no renderer involved.
+
+**Q:** Why assert a 32-bit index buffer past 65,535 vertices? That is an edge case.
+
+**Direct answer:** It is the _main_ case, not an edge case. A 30m grid over Kampala's extent is
+642 × 750 = 481,500 vertices. Written into a `Uint16Array`, index 65,536 wraps to 0, so quads in the
+far south collapse back onto the first row — torn terrain, no exception thrown anywhere. Three's
+`setIndex` picks the type for you if you hand it a plain array, but I pass a typed array explicitly
+so the choice is visible in the source and assertable.
+
+**Q:** Your first test run had four failures. What were they?
+
+**Direct answer:** All four were bugs in my tests, not the builder. Three were arithmetic — I
+asserted a full depth where I meant a half-depth, `1100 × 8 = 8800` written as `8000`, and
+`(1155 − 1100) × 8 = 440` written as `4400`. The fourth was the worst: my helper computed `ab × ac`
+when Three's right-hand-rule normal for vertex order `(v0, v1, v2)` is `(v1 − v0) × (v2 − v0)`. My
+helper's variables `a`, `b`, `c` were the triangle's vertices in index order, so `ab × ac` was
+already correct and my "fix" inverted every normal. The lesson: when a geometry test fails, verify
+the test's own vector arithmetic before rewriting the builder.
+
+**Q:** Why require uniform _cell size_ rather than a square grid?
+
+**Direct answer:** The published extent is ~19,237m east-west by ~22,461m north-south, an aspect
+ratio of 0.856. A square cell count over a non-square extent forces either two different cell sizes
+— stretching the terrain north-south, which corrupts every distance measured off it — or padding
+with dead columns. The 30m grid is 642 × 750. So I enforce uniform cell size within 0.5% relative
+drift, which also absorbs the rounding in `round(extent / cell) + 1`. It also catches the failure
+that actually matters: a DEM file whose header disagrees with its payload.
+
+**Q:** Why build the geometry in metres when you already have a `lonLatToNdc` helper?
+
+**Direct answer:** Kampala has ~1,000m of relief across 20km, so I must exaggerate vertically or
+the city looks like a sheet of paper. That exaggeration has to be one number I can state in the UI
+and in the risk report, because the terrain is 30m GLO-30 while the flood model ran on 5m — the
+report is obliged to disclose it. In NDC the ratio is entangled with the projection and stops being
+a physical quantity. Metres also keeps `computeVertexNormals` correct and gives OSM footprints and
+flood polygons one shared space to snap into. `lonLatToNdc` stays a camera and picking helper.
+
+**Q:** `pnpm test` reported 1,498 tests. The project has 61. What happened?
+
+**Direct answer:** My `vitest.config.ts` set `exclude: ['e2e/**', 'node_modules/**']`. Setting
+`exclude` _replaces_ Vitest's defaults rather than adding to them, and `node_modules/**` anchors
+only at the project root — so it never matched `.opencode/node_modules/zod/**`, and 145 suites from
+a vendored dependency were collected. Two failed. The fix was
+`[...configDefaults.exclude, 'e2e/**']`. General rule: when a config key has sane library defaults,
+spread them instead of retyping the list.
+
+---
+
 ### STORY-001a — Project bootstrap and data verification — 2026-10-05
 
 **Q:** You built a flood visualization app. Did you implement a flood simulation?

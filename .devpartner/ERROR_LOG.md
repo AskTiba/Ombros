@@ -22,12 +22,6 @@
 
 ---
 
-## Errors
-
-_(No errors logged yet — add newest at the top)_
-
----
-
 ## ERR-001 — 2026-10-05 — Source flood dataset is vector extents, not depth rasters
 
 | Field          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -51,6 +45,19 @@ _(No errors logged yet — add newest at the top)_
 | **Resolution** | Use **Copernicus DEM GLO-30** for terrain instead. Verified free & open licence; public S3 bucket `s3://copernicus-dem-30m` (`eu-central-1`, Cloud Optimized GeoTIFF, no AWS account required, STAC endpoint available). Confirmed the Kampala-covering tile `Copernicus_DSM_COG_10_N00_00_E032_00_DEM` exists and is publicly reachable — HTTP 206 on a range request. Note 30m vs the study's 5m: terrain is coarser than the flood model's resolution, which must be stated in any output so depth classes are not over-interpreted. Requires an ADR — see ADR-004. |
 | **Prevention** | Distinguish clearly between a study's _inputs_ and its _outputs_. Only outputs are downloadable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Related**    | ADR-004, RISK-007                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+---
+
+## ERR-003 — 2026-10-05 — Vitest collected 145 dependency test suites from a nested `node_modules`
+
+| Field          | Content                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Context**    | Unit 1b — writing `src/features/terrain/heightfield.test.ts`. `pnpm test` appeared to hang.                                                                                                                                                                                                                                                                                                      |
+| **Symptom**    | `pnpm test` reported **149 test files / 1498 tests / 354s** for a codebase containing 4 test files and 61 tests. Two suites failed (`utf8ToBytes`, `bytesToUtf8`) despite never being written.                                                                                                                                                                                                   |
+| **Root cause** | `vitest.config.ts` set `exclude: ['e2e/**', 'node_modules/**']`. Overriding `exclude` _replaces_ Vitest's defaults, and the replacement pattern `node_modules/**` anchors only at the project root, so it did not match `.opencode/node_modules/zod/src/v3/tests/*.test.ts`. `.opencode/` is the skill vendor directory created by `BOOT.md` §Section A, which ships its own dependency install. |
+| **Resolution** | `exclude: [...configDefaults.exclude, 'e2e/**']` — `configDefaults.exclude` carries `**/node_modules/**`, which anchors at any depth and restores the defaults that were also being silently discarded. Added `.opencode/node_modules/` and its lockfiles to `.gitignore`. Suite is now 4 files / 61 tests / 12s.                                                                                |
+| **Prevention** | When a config key has sane library defaults, spread `configDefaults` rather than hand-rolling the list. When `pnpm test` reports a test count that does not match the repo's own files, suspect collection scope before suspecting the tests. A run that takes minutes and fails on suites you never wrote is a config bug, not a flaky test.                                                    |
+| **Related**    | SKILL_EVOLUTION.md — renderer-free geometry builders convention                                                                                                                                                                                                                                                                                                                                  |
 
 ---
 
