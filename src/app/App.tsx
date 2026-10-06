@@ -1,4 +1,13 @@
-import { ScenePlaceholder } from '@/features/terrain/ScenePlaceholder';
+import { lazy } from 'react';
+
+import { SceneFallback } from '@/features/terrain/SceneFallback';
+import { SceneGate } from '@/features/terrain/SceneGate';
+
+const TerrainScene = lazy(() =>
+  import('@/features/terrain/TerrainScene').then((module) => ({
+    default: module.TerrainScene,
+  })),
+);
 
 export function App() {
   return (
@@ -7,7 +16,15 @@ export function App() {
         <h1 className="text-lg font-semibold tracking-tight">Ombros</h1>
         <p className="text-sm text-text-secondary">Flood risk intelligence for Kampala</p>
       </header>
-      <ScenePlaceholder />
+      <SceneGate
+        scene={TerrainScene}
+        fallback={<SceneFallback />}
+        loading={
+          <p role="status" className="grid min-h-[60dvh] place-items-center p-6">
+            Loading 3D scene…
+          </p>
+        }
+      />
     </main>
   );
 }

@@ -15,9 +15,11 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /ombros/i })).toBeInTheDocument();
   });
 
-  it('states that 3D rendering is still unbuilt rather than showing a broken canvas', () => {
+  it('offers the accessible fallback when WebGL2 is unavailable', () => {
     render(<App />);
 
-    expect(screen.getByTestId('scene-placeholder')).toBeInTheDocument();
+    expect(screen.getByTestId('scene-fallback')).toBeInTheDocument();
+    expect(screen.getByText(/webgl2/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('r3f-canvas')).not.toBeInTheDocument();
   });
 });

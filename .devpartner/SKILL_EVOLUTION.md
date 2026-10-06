@@ -122,3 +122,17 @@ explicit override (`--config.dangerouslyAllowAllBuilds=false`) plus a fresh
 signal you need. Also: package managers may edit your config files for you
 (pnpm wrote `msw: set this to true or false` into pnpm-workspace.yaml) — read
 tool-authored diffs as prompts for a reviewed decision, never commit them as-is.
+
+## S-EVOL-010 — Determinism beats speed in a test gate
+
+Parallel test files are a performance optimisation that can silently turn into a
+flakiness source on a shared machine: three geometry-heavy files plus ten jsdom
+environments starved a 4-core box down to multi-second stalls, and tests that
+passed alone failed only in the full run (ERR-010). Two habits transfer to any
+project. First, when a suite flakes only as a whole, reproduce with
+subset/pairwise runs before suspecting interaction bugs — contention and
+cross-test interference look identical in a full-run log. Second, prefer
+`fileParallelism: false` over timeout ratchets: raising Vitest's test timeout
+does nothing for React Testing Library's own 1s `findByRole` wait, and a gate
+that is green when the machine is quiet but red under its real load is not a
+gate.

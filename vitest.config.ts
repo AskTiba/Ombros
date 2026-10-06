@@ -23,6 +23,13 @@ export default defineConfig({
     // `.opencode/` skill vendor directory ships its own node_modules) cannot
     // leak dependency test suites into our run.
     exclude: [...configDefaults.exclude, 'e2e/**'],
+    // Deterministic over fast. This is a shared 4-core machine where background
+    // tooling routinely leaves ~2GB free; parallel jsdom workers made the
+    // geometry-heavy files trip the 5s default timeout — a gate that is red
+    // under load but green in CI (or the reverse) is worse than a slow one
+    // (ERR-010). Sequential file execution also mirrors CI's 2-core runners.
+    fileParallelism: false,
+    testTimeout: 10_000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

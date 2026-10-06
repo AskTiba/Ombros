@@ -161,6 +161,26 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001h — Terrain scene contents, wiring, and a flaky gate — 2026-10-07
+
+**Q:** Why does `TerrainScene` split into three components instead of one function with early returns?
+
+**Direct answer:** The rules of hooks. The geometry is built with `useMemo` and released with a `useEffect` cleanup, and both must run on every render — but an early `return <Loading/>` before them would skip those calls whenever the data was still in flight, which React forbids and which breaks silently the moment loading happens twice. The split mirrors the state machine instead: `TerrainScene` owns the load lifecycle and narrows the result, `DemFailure` renders honest per-reason copy with no Three.js dependency, and `TerrainCanvas` is the only component that may touch geometry. As a side effect each piece is testable at its own level — the failure messages never need a canvas mock, and the canvas component never needs MSW.
+
+**Q:** The vertical exaggeration is an exported constant and the test asserts the caption against it. Why?
+
+**Direct answer:** ADR-005 requires the exaggeration to be one number that can be stated in the UI and repeated in the generated risk report — if the geometry uses ×2 but the caption drifts to ×3, the product lies about its own terrain. Exporting `VERTICAL_EXAGGERATION` means the same constant feeds `buildHeightfieldGeometry` and the caption text, and the test asserts the caption contains exactly `×${VERTICAL_EXAGGERATION}` — so the disclosure cannot diverge from the geometry without a red test. A magic number in the JSX would have no way to make that claim testable.
+
+**Q:** Every test file passed alone, but the full run failed three of them. Why was the fix `fileParallelism: false` rather than a bigger timeout?
+
+**Direct answer:** Because two different waits were failing. Two tests hit Vitest's 5s test timeout, but SceneGate's boundary test failed React Testing Library's own 1s `findByRole` wait — a timeout knob Vitest cannot touch. More fundamentally the diagnosis came from subset runs: two files together passed, the full run of ten failed with three files simultaneously 3-5× slower than usual — the signature of CPU and GC contention on a shared 4-core box, not of an interaction bug between tests. Raising timeouts would only move the flake threshold; running files sequentially removes the contention and mirrors CI's 2-core runner. The principle: a gate that is green when the machine is quiet but red under its real load is not a gate.
+
+**Q:** `geometry.dispose()` runs in an effect cleanup. Isn't that premature — jsdom has no GPU?
+
+**Direct answer:** In jsdom it is a no-op, so if the cleanup were only about tests it would be dead code. It is about React StrictMode, which is on in `main.tsx`: development mounts, unmounts, and remounts every component to surface lifecycle bugs, and Three.js allocates GPU buffers that React does not know about. Without the cleanup, each remount leaks a 479k-vertex buffer on the actual target device — a mid-range Android phone with far less memory than the dev machine. The test environment being unable to observe the leak is exactly why the discipline has to live in the code rather than in the test.
+
+---
+
 ### STORY-001c-i — Quantised DEM binary — 2026-10-05
 
 **Q:** How did you halve the DEM payload, and what did it cost you in precision?
