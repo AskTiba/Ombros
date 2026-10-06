@@ -4,7 +4,7 @@
 > post-hoc project scans — every entry maps a real design decision, file, or code pattern
 > to the question an interviewer would ask, with a teaching-grade model answer written for
 > an intermediate developer working toward interview readiness.
-> Last updated: 2026-10-05
+> Last updated: 2026-10-06
 
 ---
 
@@ -118,6 +118,26 @@ spread them instead of retyping the list.
 **Q:** Why does your test file derive the grid dimensions instead of hardcoding 643 x 746?
 
 **Direct answer:** Because I hardcoded `642 x 750` and it encoded the sphere extent. When I fixed the projection the test failed — and it failed for the right reason, because 643 x 746 is genuinely the correct 30m grid now. But I only knew that because I rechecked the arithmetic by hand. If I had not, I would have "fixed" the test by loosening it and baked the 146m axis error in permanently. A fixture derived from another calculation should recompute from the shared source.
+
+---
+
+### STORY-001f-i — DEM transport layer and the msw@3 crash — 2026-10-06
+
+**Q:** Why does `loadDemGrid` return `{ ok: false, reason }` instead of throwing?
+
+**Direct answer:** Because a missing DEM is a normal state of this product, not an exception. The binary is gitignored — on a fresh clone, `git clone && pnpm dev` is guaranteed to 404 until someone runs `node scripts/fetch-dem.mjs`. An exception hierarchy is for things that should not happen; this happens on every fresh checkout. The union also makes the handling exhaustive by construction: the caller must render a distinct fallback for `not-found` (asset absent, tell the developer to run the script), `corrupt` (bytes arrived but are not a DEM), and `network` (retry is plausible). With a thrown error, each of those states would be discovered by reading a catch block rather than by the type system.
+
+**Q:** You don't stub `fetch` with `vi.fn()`. Why add a whole dependency to test one function?
+
+**Direct answer:** Because the code under test _is_ the transport behaviour — status handling, `response.ok`, `arrayBuffer()`. A `vi.fn()` stub returns whatever shape I hand-construct, which means the test would assert my mental model of `fetch` rather than `fetch`. The moment the real API differs (a 404 still resolves; only network-level failures reject), the stub silently agrees with me and the test is worthless. MSW intercepts at the network layer, so the real Request/Response path runs. The discipline has a cost: MSW crashed on first use (see next question) — but a real interceptor failing loudly is strictly better than a fake that passes while asserting nothing.
+
+**Q:** `msw@3` failed on its very first run. How did you know it wasn't your bug?
+
+**Direct answer:** The failure pattern. Six tests failed with the identical `RequestInit: Expected signal ("AbortSignal {}") to be an instance of AbortSignal` — with and without a matched handler, on relative and absolute URLs — which application bug produces? Then I read the cause chain rather than only the message: it led through `@mswjs/interceptors@0.45.7` into Node 24's bundled undici's webidl type check. The experiment that settled it was swapping the version: `msw@2.15.0`, zero changes to test or application code, seven tests green. That swap is a localisation tool — if the code passes unchanged on another major, the fault was never in the code. It also had to happen _before_ normal debugging, because TDD says a red test must be red for the expected reason; here the expected red was "module does not exist" and the actual red was an interceptor crash, and treating those as the same would have sent me debugging my own fetch wrapper for an hour.
+
+**Q:** Your quantisation test failed with a max error of 80 metres against an allowance of 0.2 millimetres. What was wrong?
+
+**Direct answer:** My fixture, not the code. `rampGrid()` generated `1100 + i * 10` across twelve samples — reaching 1210 — but I had hardcoded `maxElevationMeters: 1130` in the returned object. The encoder clamps to the declared band, so every sample above 1130 flattened to 1130, and the decode error was exactly the clamp. The fix was to derive the band with `Math.min(...samples)` / `Math.max(...samples)`: a fixture field that restates a value computed elsewhere is a second source of truth, and when the two disagree the test reports a catastrophic failure in the thing it was supposed to protect. It is the same class of mistake as hardcoding `642 x 750` in the heightfield test — and the same lesson: compute expected values in the test, never restate them.
 
 ---
 

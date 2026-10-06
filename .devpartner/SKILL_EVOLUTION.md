@@ -3,7 +3,7 @@
 > Read at the START of every session, before anything else. Updated at the END of every
 > session and every sprint retrospective. These entries OVERRIDE the defaults in BOOT.md and
 > the SKILL.md files for this project.
-> Last updated: 2026-10-05
+> Last updated: 2026-10-06
 
 ---
 
@@ -89,3 +89,23 @@ Rule adopted: **for any geospatial pipeline, name the real-world landmark the ou
 peak on, and check it before moving on.** Also: read the file's own georeferencing tags
 rather than parsing its name. My first TIFF probe misread the tiepoint as `(1, 0)` instead of
 `(32, 1)` and nearly led to the conclusion that the tile did not cover Kampala.
+
+### S-EVOL-008 — 2026-10-06 — When a new dependency fails inside its own stack, swap majors before debugging your code
+
+Added `msw@3.0.2` for the first network test; every fetch died with
+`RequestInit: Expected signal ("AbortSignal {}") to be an instance of AbortSignal`,
+from `@mswjs/interceptors` into Node's bundled undici. Two features of the failure said
+"dependency, not us": identical errors with and without a matched handler, and a cause
+chain that never touched application code. Installing `msw@2.15.0` and re-running —
+zero code changes, seven tests green — both fixed it and proved where it was.
+
+Rule adopted: **if a fresh dependency fails on first use with an error originating in
+its own modules, run the same test on the previous major before reading a line of your
+own code.** The version swap is the cheapest localising experiment there is. Pair it
+with the existing TDD rule: a red run must be red for the _expected_ reason — "module
+does not exist" and "interceptor crash" are different reds, and conflating them sends
+the debugging the wrong way.
+
+Also re-confirmed the fixture lesson: a test fixture field that restates a computed
+value (`maxElevationMeters: 1130` against a ramp reaching 1210) is a second source of
+truth. Derive it (`Math.max(...samples)`), never restate it.

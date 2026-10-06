@@ -2,26 +2,27 @@
 
 > **Single source of truth for project continuity across sessions.**
 > Read at the start of every session. It IS the memory.
-> Last updated: 2026-10-05
+> Last updated: 2026-10-06
 
 ---
 
 ## What Currently Works
 
-| Feature / Component                                                  | Verified by                                           | Date       |
-| -------------------------------------------------------------------- | ----------------------------------------------------- | ---------- |
-| Repo initialized + `.devpartner/` state files seeded                 | `git init`, files on disk                             | 2026-10-05 |
-| Domain research: problem validated, public data sources confirmed    | Web research (see ROADMAP → Evidence)                 | 2026-10-05 |
-| Toolchain scaffold: Vite + React 19 + strict TS + Vitest + ESLint    | `pnpm build`, `pnpm typecheck`, `pnpm lint`           | 2026-10-05 |
-| Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)              | `src/lib/geo.test.ts` (12 tests)                      | 2026-10-05 |
-| Flood scenario model + depth classes (`src/features/flood/types.ts`) | `src/features/flood/types.test.ts` (9 tests)          | 2026-10-05 |
-| Terrain heightfield builder — `buildHeightfieldGeometry()`           | `src/features/terrain/heightfield.test.ts` (37 tests) | 2026-10-05 |
-| Test collection scoped to `src/` only (ERR-003 fixed)                | 6 files / 116 tests / 16s                             | 2026-10-05 |
-| Type-check gate actually checks files (ERR-006 fixed)                | `tsc --listFiles` 263; canary proven to fail          | 2026-10-05 |
-| CI mirrors the commit gate, order and all                            | `actionlint` clean; local gate green                  | 2026-10-05 |
-| DEM fetched from the live COG, resampled, quantised, round-tripped   | 643x746, 0.91MB, step 2.93mm, peak at Kololo Hill     | 2026-10-05 |
+| Feature / Component                                                      | Verified by                                           | Date       |
+| ------------------------------------------------------------------------ | ----------------------------------------------------- | ---------- |
+| Repo initialized + `.devpartner/` state files seeded                     | `git init`, files on disk                             | 2026-10-05 |
+| Domain research: problem validated, public data sources confirmed        | Web research (see ROADMAP → Evidence)                 | 2026-10-05 |
+| Toolchain scaffold: Vite + React 19 + strict TS + Vitest + ESLint        | `pnpm build`, `pnpm typecheck`, `pnpm lint`           | 2026-10-05 |
+| Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)                  | `src/lib/geo.test.ts` (12 tests)                      | 2026-10-05 |
+| Flood scenario model + depth classes (`src/features/flood/types.ts`)     | `src/features/flood/types.test.ts` (9 tests)          | 2026-10-05 |
+| Terrain heightfield builder — `buildHeightfieldGeometry()`               | `src/features/terrain/heightfield.test.ts` (37 tests) | 2026-10-05 |
+| Test collection scoped to `src/` only (ERR-003 fixed)                    | 6 files / 116 tests / 16s                             | 2026-10-05 |
+| Type-check gate actually checks files (ERR-006 fixed)                    | `tsc --listFiles` 263; canary proven to fail          | 2026-10-05 |
+| CI mirrors the commit gate, order and all                                | `actionlint` clean; local gate green                  | 2026-10-05 |
+| DEM fetched from the live COG, resampled, quantised, round-tripped       | 643x746, 0.91MB, step 2.93mm, peak at Kololo Hill     | 2026-10-05 |
+| DEM transport layer — fetch → decode with typed failures (`loadDemGrid`) | `loadDem.test.ts` (7 tests) through MSW               | 2026-10-06 |
 
-> 116 tests across 6 files, all green. `public/data/kampala-dem.bin` is written and gitignored —
+> 123 tests across 7 files, all green. `public/data/kampala-dem.bin` is written and gitignored —
 > regenerate with `node scripts/fetch-dem.mjs` (needs Node 22.18+/24 for type stripping).
 > No Three.js scene is mounted in the app yet; `ScenePlaceholder` stands in.
 > See "Planned Next" for the exact next step.
@@ -30,12 +31,11 @@
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit       | Exact Next Action                                                                                                                                                                                                                                                                                                                                             | Files                                                          |
-| ------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| STORY-001 — Standing 3D scene over Kampala | Unit 1c-iii (done) | **Shipped.** `scripts/fetch-dem.mjs` range-requests the COG, reads only the 626x730 px window covering Kampala, resamples to the uniform 643x746 grid, quantises to uint16, writes `public/data/kampala-dem.bin` and verifies the round trip through `readDemBinary`. All geometry lives in the tested `demResample.ts` (26 tests), not the script (ADR-010). | `scripts/fetch-dem.mjs`, `src/features/terrain/demResample.ts` |
+| Story/Task                                 | Current Unit     | Exact Next Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Files                                                                  |
+| ------------------------------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| STORY-001 — Standing 3D scene over Kampala | Unit 1e-i (done) | **1e-i shipped.** `loadDemGrid()` fetches `/data/kampala-dem.bin` and decodes it through `readDemBinary`, returning a typed result (`not-found` / `corrupt` / `network`) instead of throwing — the asset is gitignored, so a missing file is a normal state, not an exception. 7/7 tests through MSW (the project's first network call). **Exact next action: Unit 1e-ii** — `supportsWebGl2()` probe plus a `<TerrainScene>` gate in `src/features/terrain/`: lazy-loaded R3F `Canvas` mounted only together with the terrain mesh (never an empty canvas, ADR-002), otherwise an honest accessible fallback replacing `ScenePlaceholder`'s now-stale "not yet built" copy. | `src/features/terrain/loadDem.ts`; next `TerrainScene.tsx`, `webgl.ts` |
 
-> **Next is Unit 1d — adaptive quality tiers**, with three measured tiers including load-time
-> grid decimation, since a 30m grid is heavy for the mid-range Android this is built for.
+> **Sequencing changed 2026-10-06:** Unit 1e (the scene) now comes before Unit 1d (quality tiers). The plan calls for _measured_ tiers, and measuring needs a renderer to measure against — building tier budgets first would mean inventing them (measure before optimizing). 1d follows 1e immediately and plugs into the scene's grid input; a 30m grid at 479,678 vertices is heavy for the mid-range Android this is built for.
 
 > **Unit 1c-iii is done.** The source tile was verified rather than assumed: `N00_00_E032_00`
 > covers 32-33E / 0-1N and so does contain the study extent; samples are float32 EGM2008; the
@@ -79,8 +79,8 @@
 
 ## Planned Next (Prioritized)
 
-1. Unit 1d — adaptive quality tiers (3 tiers, measured), including load-time grid decimation
-2. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002)
+1. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002) — **in progress, 1e-i done**
+2. Unit 1d — adaptive quality tiers (3 tiers, measured against the live scene), including load-time grid decimation
 3. Unit 2 — flood extent classes → animated water surface
 4. Unit 3 — accessible 2D depth view
 5. Unit 4 — sub-county risk readout
@@ -108,16 +108,16 @@ decision artifact a planner or insurer will pay for.
 
 ### Stack
 
-| Layer       | Technology                            | Version               | Notes                                                                                           |
-| ----------- | ------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------- |
-| Runtime     | Node                                  | ^20.19.0 \| >=22.12.0 | pnpm 11.16. Engine floor is Vite 7's, not an arbitrary choice (CI `engine-floor` job proves it) |
-| Framework   | React                                 | 19.3                  | Vite 7, TypeScript 5.9 strict                                                                   |
-| 3D          | Three.js + @react-three/fiber + drei  | 0.182 / 9.8 / 10.7    | R3F over raw Three.js — declarative scene graph fits React data flow                            |
-| Styling     | Tailwind CSS                          | 4.3                   | CSS-first tokens, via `@tailwindcss/vite`                                                       |
-| Data layer  | PostgreSQL + Drizzle ORM              | 16 / 0.4x             | Matches existing portfolio convention                                                           |
-| Validation  | Zod                                   | 4.6                   |                                                                                                 |
-| Testing     | Vitest 3.2 + RTL 16 + Playwright 1.57 |                       | Integration-first. MSW added when the first network call exists.                                |
-| Lint/format | ESLint 9 flat + Prettier 3            |                       | typescript-eslint 8.71                                                                          |
+| Layer       | Technology                                       | Version               | Notes                                                                                                                         |
+| ----------- | ------------------------------------------------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Runtime     | Node                                             | ^20.19.0 \| >=22.12.0 | pnpm 11.16. Engine floor is Vite 7's, not an arbitrary choice (CI `engine-floor` job proves it)                               |
+| Framework   | React                                            | 19.3                  | Vite 7, TypeScript 5.9 strict                                                                                                 |
+| 3D          | Three.js + @react-three/fiber + drei             | 0.182 / 9.8 / 10.7    | R3F over raw Three.js — declarative scene graph fits React data flow                                                          |
+| Styling     | Tailwind CSS                                     | 4.3                   | CSS-first tokens, via `@tailwindcss/vite`                                                                                     |
+| Data layer  | PostgreSQL + Drizzle ORM                         | 16 / 0.4x             | Matches existing portfolio convention                                                                                         |
+| Validation  | Zod                                              | 4.6                   |                                                                                                                               |
+| Testing     | Vitest 3.2 + RTL 16 + MSW 2.15 + Playwright 1.57 |                       | Integration-first. MSW pinned to v2 — v3 crashes under Vitest jsdom (ERR-008). Added with the first network call (Unit 1e-i). |
+| Lint/format | ESLint 9 flat + Prettier 3                       |                       | typescript-eslint 8.71                                                                                                        |
 
 ### Project Structure
 

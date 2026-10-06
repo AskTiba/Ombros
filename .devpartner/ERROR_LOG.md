@@ -1,7 +1,7 @@
 # Error Log — Ombros
 
 > Every non-trivial error is logged here at the time it's resolved.
-> Newest entries at top. Last updated: 2026-10-05
+> Newest entries at top. Last updated: 2026-10-06
 
 ---
 
@@ -19,6 +19,19 @@
 | **Prevention** | What catches this earlier next time |
 | **Related** | Links to other entries |
 ```
+
+---
+
+## ERR-008 — 2026-10-06 — msw 3.0.2 crashed every fetch under Vitest jsdom
+
+| Field          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Context**    | Unit 1e-i — the project's first network call (`loadDemGrid`). Installed the current msw release and wrote the transport tests first (IDL-3).                                                                                                                                                                                                                                                                                                                                                      |
+| **Symptom**    | Every fetch rejected with `TypeError: RequestInit: Expected signal ("AbortSignal {}") to be an instance of AbortSignal`, independent of handler registration, relative or absolute URL, or the code under test. Six of seven tests failed identically — the same failure with and without a matched handler, which is not what an application bug looks like.                                                                                                                                     |
+| **Root cause** | The cause chain in the rejection pointed inside the dependency: `@mswjs/interceptors@0.45.7` (`record-raw-headers.ts` → `new FetchRequest`) constructing a `Request` that Node 24's bundled undici rejected at its webidl type check. A signal object was crossing a realm/boundary that `instanceof` did not recognise when Vitest's jsdom environment was active. It is a msw 3.x / undici / jsdom interaction, not our fetch code — proven by the code passing unchanged after a version swap. |
+| **Resolution** | Pinned `msw@2.15.0` in `package.json` (devDependency; MIT, verified from its own manifest). All seven `loadDem.test.ts` tests passed with no changes to test or application code. The version choice and the failure are recorded in ADR-012.                                                                                                                                                                                                                                                     |
+| **Prevention** | When a new dependency fails _inside its own stack_ on first use, swap versions before debugging your own code — the version swap is the experiment that localises the fault. Also: a test-first red run must be red _for the expected reason_; here the expected reason was "module does not exist" and the actual red was an interceptor crash, and conflating the two would have sent the debugging down the wrong path.                                                                        |
+| **Related**    | ADR-012, ERR-007, SKILL_EVOLUTION → S-EVOL-008                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ---
 
