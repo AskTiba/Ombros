@@ -161,6 +161,18 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001j — The tier model and why capability never buys you 'high' — 2026-10-07
+
+**Q:** Why can't a powerful device start on `high`? Sixteen GB of RAM and a 4g link are exactly what a premium tier is for.
+
+**Direct answer:** Because those are marketing signals, not evidence. `navigator.deviceMemory` measures system RAM — irrelevant to whether a 479k-vertex draw loop holds 30fps — and `effectiveType` measures the network, which doesn't touch a local mesh render at all. The roadmap says tiers are _auto-selected on measured perf_, which is a commitment: the initial heuristic can only demote, and `high` is entered by only one path, the frame-time sampler, which actually observes the render loop doing the work. So the best possible signal set returns `medium`, and a desktop that genuinely can sit at `high` earns it in the first seconds; a device that the signals were wrong about can always be demoted again. The alternative — trusting capability to buy `high` — fails exactly when a mid-range Android with 6GB of marketing RAM underperforms a working laptop with 4.
+
+**Q:** Why does the worst signal win instead of averaging the signals?
+
+**Direct answer:** Because votes are not weighted preferences; they are constraints. `saveData: true` is the user announcing they do not want data spent — a fast desktop's `deviceMemory` averaging against it, and floating the device to `medium`, would silently override an expressed preference. Constraint resolution can only be a minimum: if any signal says the device is weak, the device is treated as weak until measurement says otherwise, because the cost of a wrong demotion is a few seconds of visual quality and the cost of a wrong promotion on a mid-range phone is a device that heats up and drops the scene below 30fps. Direction of error matters, and it points down.
+
+---
+
 ### STORY-001i — Grid decimation for quality tiers — 2026-10-07
 
 **Q:** Why not plain stride sampling — take every Nth row and column?
