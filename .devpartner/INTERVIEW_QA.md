@@ -141,6 +141,26 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001g-i — WebGL2 probe and the scene gate — 2026-10-06
+
+**Q:** `supportsWebGl2` takes an injectable context factory. Isn't `canvas.getContext('webgl2')` too trivial to need an seam?
+
+**Direct answer:** The seam exists because jsdom has no WebGL — in the test environment the real call can only produce one of the outcomes (null or a throw), so without injection the "returns true" branch and the "returns false" branch could never both be exercised. Injection makes the whole decision table first-class: a factory returning an object proves true, returning null proves false, throwing proves the catch. The alternative — mocking `HTMLCanvasElement.prototype.getContext` — is a global mutation every test must remember to undo, and it tests the mock's behaviour, not the function's. The default factory stays three lines of real DOM glue, verified separately by the jsdom test, so both halves are covered: the logic under controlled inputs, the glue in the real (test) environment.
+
+**Q:** Why cache the probe in `useState` instead of calling `supportsWebGl2()` during render?
+
+**Direct answer:** Because it is a fact about the machine, not derived state — it cannot change between renders, so recomputing it would only churn DOM (a throwaway canvas and context per render, and `SceneGate` re-renders during every Suspense transition). The `useState` initializer runs once per mount, which also means the tree's structure cannot flip mid-lifetime: if WebGL2 dies at runtime the error boundary handles that as a failure, rather than the gate silently unmounting the scene underneath the user.
+
+**Q:** Why is a class-based error boundary necessary? Isn't Suspense enough?
+
+**Direct answer:** Suspense and the error boundary cover two different failure modes of the same lazy import: Suspense handles _pending_ (the chunk is still downloading) and the boundary handles _failed_ (the fetch rejected — entirely plausible for the target user on mid-range Android over mobile data). React provides no hook for error boundaries; `getDerivedStateFromError` only exists on class components. Without the boundary, a rejected dynamic import during render propagates to the root and unmounts the whole app — a white screen where ADR-002 requires the accessible 2D fallback. Graceful degradation means every async failure has an honest destination.
+
+**Q:** The gate works and is tested, but `App` still renders `ScenePlaceholder`. Isn't unwired code unfinished?
+
+**Direct answer:** The unit's acceptance was probe-and-gate correctness, which the tests prove. Wiring it into `App` today would ship one of two bad states: the gate renders its fallback everywhere (a no-op change that still leaves the stale "not yet built" copy), or it lazy-mounts a `TerrainScene` with no contents — a bare canvas, which is exactly what ADR-002 forbids. The App swap lands with the contents unit so the user-visible change happens once, complete: WebGL2 sees terrain, everything else sees the accessible path to the same data.
+
+---
+
 ### STORY-001c-i — Quantised DEM binary — 2026-10-05
 
 **Q:** How did you halve the DEM payload, and what did it cost you in precision?

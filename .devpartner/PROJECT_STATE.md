@@ -8,21 +8,22 @@
 
 ## What Currently Works
 
-| Feature / Component                                                      | Verified by                                           | Date       |
-| ------------------------------------------------------------------------ | ----------------------------------------------------- | ---------- |
-| Repo initialized + `.devpartner/` state files seeded                     | `git init`, files on disk                             | 2026-10-05 |
-| Domain research: problem validated, public data sources confirmed        | Web research (see ROADMAP → Evidence)                 | 2026-10-05 |
-| Toolchain scaffold: Vite + React 19 + strict TS + Vitest + ESLint        | `pnpm build`, `pnpm typecheck`, `pnpm lint`           | 2026-10-05 |
-| Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)                  | `src/lib/geo.test.ts` (12 tests)                      | 2026-10-05 |
-| Flood scenario model + depth classes (`src/features/flood/types.ts`)     | `src/features/flood/types.test.ts` (9 tests)          | 2026-10-05 |
-| Terrain heightfield builder — `buildHeightfieldGeometry()`               | `src/features/terrain/heightfield.test.ts` (37 tests) | 2026-10-05 |
-| Test collection scoped to `src/` only (ERR-003 fixed)                    | 6 files / 116 tests / 16s                             | 2026-10-05 |
-| Type-check gate actually checks files (ERR-006 fixed)                    | `tsc --listFiles` 263; canary proven to fail          | 2026-10-05 |
-| CI mirrors the commit gate, order and all                                | `actionlint` clean; local gate green                  | 2026-10-05 |
-| DEM fetched from the live COG, resampled, quantised, round-tripped       | 643x746, 0.91MB, step 2.93mm, peak at Kololo Hill     | 2026-10-05 |
-| DEM transport layer — fetch → decode with typed failures (`loadDemGrid`) | `loadDem.test.ts` (7 tests) through MSW               | 2026-10-06 |
+| Feature / Component                                                       | Verified by                                             | Date       |
+| ------------------------------------------------------------------------- | ------------------------------------------------------- | ---------- |
+| Repo initialized + `.devpartner/` state files seeded                      | `git init`, files on disk                               | 2026-10-05 |
+| Domain research: problem validated, public data sources confirmed         | Web research (see ROADMAP → Evidence)                   | 2026-10-05 |
+| Toolchain scaffold: Vite + React 19 + strict TS + Vitest + ESLint         | `pnpm build`, `pnpm typecheck`, `pnpm lint`             | 2026-10-05 |
+| Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)                   | `src/lib/geo.test.ts` (12 tests)                        | 2026-10-05 |
+| Flood scenario model + depth classes (`src/features/flood/types.ts`)      | `src/features/flood/types.test.ts` (9 tests)            | 2026-10-05 |
+| Terrain heightfield builder — `buildHeightfieldGeometry()`                | `src/features/terrain/heightfield.test.ts` (37 tests)   | 2026-10-05 |
+| Test collection scoped to `src/` only (ERR-003 fixed)                     | 6 files / 116 tests / 16s                               | 2026-10-05 |
+| Type-check gate actually checks files (ERR-006 fixed)                     | `tsc --listFiles` 263; canary proven to fail            | 2026-10-05 |
+| CI mirrors the commit gate, order and all                                 | `actionlint` clean; local gate green                    | 2026-10-05 |
+| DEM fetched from the live COG, resampled, quantised, round-tripped        | 643x746, 0.91MB, step 2.93mm, peak at Kololo Hill       | 2026-10-05 |
+| DEM transport layer — fetch → decode with typed failures (`loadDemGrid`)  | `loadDem.test.ts` (7 tests) through MSW                 | 2026-10-06 |
+| WebGL2 probe + scene gate — fallback or lazy scene, never an empty canvas | `supportsWebGl2.test.ts` (4) + `SceneGate.test.tsx` (3) | 2026-10-06 |
 
-> 123 tests across 7 files, all green. `public/data/kampala-dem.bin` is written and gitignored —
+> 130 tests across 9 files, all green. `public/data/kampala-dem.bin` is written and gitignored —
 > regenerate with `node scripts/fetch-dem.mjs` (needs Node 22.18+/24 for type stripping).
 > No Three.js scene is mounted in the app yet; `ScenePlaceholder` stands in.
 > See "Planned Next" for the exact next step.
@@ -31,9 +32,9 @@
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit     | Exact Next Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Files                                                                  |
-| ------------------------------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| STORY-001 — Standing 3D scene over Kampala | Unit 1e-i (done) | **1e-i shipped.** `loadDemGrid()` fetches `/data/kampala-dem.bin` and decodes it through `readDemBinary`, returning a typed result (`not-found` / `corrupt` / `network`) instead of throwing — the asset is gitignored, so a missing file is a normal state, not an exception. 7/7 tests through MSW (the project's first network call). **Exact next action: Unit 1e-ii** — `supportsWebGl2()` probe plus a `<TerrainScene>` gate in `src/features/terrain/`: lazy-loaded R3F `Canvas` mounted only together with the terrain mesh (never an empty canvas, ADR-002), otherwise an honest accessible fallback replacing `ScenePlaceholder`'s now-stale "not yet built" copy. | `src/features/terrain/loadDem.ts`; next `TerrainScene.tsx`, `webgl.ts` |
+| Story/Task                                 | Current Unit             | Exact Next Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Files                                                                              |
+| ------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| STORY-001 — Standing 3D scene over Kampala | Unit 1e-iii (1e-ii done) | **1e-ii shipped.** `supportsWebGl2()` probes with an injectable context factory (true / null / throw all tested, plus the real jsdom default → false) and `<SceneGate>` renders the accessible fallback when WebGL2 is absent or the lazy scene chunk fails (error boundary — Suspense only covers _pending_, not _failed_), lazy-mounting the scene otherwise: never an empty canvas (ADR-002). 7 tests (4+3). Deliberately **not wired into App yet** — an empty canvas would violate ADR-002, and the swap ships once, with data behind it. **Exact next action: Unit 1e-iii** — `<TerrainScene>` contents (camera, lights, mesh from `buildHeightfieldGeometry` fed by the load → resample → heightfield pipeline), then wire `App` through `<SceneGate>` and replace `ScenePlaceholder`'s stale "not yet built" copy. | `src/features/terrain/supportsWebGl2.ts`, `SceneGate.tsx`; next `TerrainScene.tsx` |
 
 > **Sequencing changed 2026-10-06:** Unit 1e (the scene) now comes before Unit 1d (quality tiers). The plan calls for _measured_ tiers, and measuring needs a renderer to measure against — building tier budgets first would mean inventing them (measure before optimizing). 1d follows 1e immediately and plugs into the scene's grid input; a 30m grid at 479,678 vertices is heavy for the mid-range Android this is built for.
 
@@ -79,7 +80,7 @@
 
 ## Planned Next (Prioritized)
 
-1. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002) — **in progress, 1e-i done**
+1. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002) — **in progress, 1e-ii done**
 2. Unit 1d — adaptive quality tiers (3 tiers, measured against the live scene), including load-time grid decimation
 3. Unit 2 — flood extent classes → animated water surface
 4. Unit 3 — accessible 2D depth view
