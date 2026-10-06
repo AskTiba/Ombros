@@ -109,3 +109,16 @@ the debugging the wrong way.
 Also re-confirmed the fixture lesson: a test fixture field that restates a computed
 value (`maxElevationMeters: 1130` against a ramp reaching 1210) is a second source of
 truth. Derive it (`Math.max(...samples)`), never restate it.
+
+## S-EVOL-009 — Environment parity beats local confidence
+
+A green local gate is only as honest as the machine's global tool config. A
+user-scope `dangerouslyAllowAllBuilds: true` made every local install blind to
+`allowBuilds` gaps, so `pnpm install --frozen-lockfile` passed locally and failed
+in all four CI jobs (ERR-009). When local and CI disagree, diff the effective
+config (`pnpm config list`) before debugging the code, and reproduce with an
+explicit override (`--config.dangerouslyAllowAllBuilds=false`) plus a fresh
+`node_modules` — warm state (store **or** installed tree) suppresses exactly the
+signal you need. Also: package managers may edit your config files for you
+(pnpm wrote `msw: set this to true or false` into pnpm-workspace.yaml) — read
+tool-authored diffs as prompts for a reviewed decision, never commit them as-is.

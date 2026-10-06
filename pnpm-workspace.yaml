@@ -6,8 +6,14 @@
 # ERR_PNPM_IGNORED_BUILDS on a cold store — which is exactly what CI saw, while a
 # warm local store hid it (ERR-007).
 #
+# msw's postinstall copies the browser worker only when package.json has an
+# "msw.workerDirectory" field; we use msw/node in tests, so the script is a
+# no-op here. It is allowed rather than never-built so the browser worker path
+# keeps working if E2E later needs it.
+#
 # Listed explicitly rather than allowing all builds: an allowlist is a claim
 # about which dependencies run arbitrary code, and should be re-examined rather
 # than granted wholesale.
 allowBuilds:
   esbuild: true
+  msw: true
