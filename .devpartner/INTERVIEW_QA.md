@@ -161,6 +161,18 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001i — Grid decimation for quality tiers — 2026-10-07
+
+**Q:** Why not plain stride sampling — take every Nth row and column?
+
+**Direct answer:** Because the kept grid gets stretched across the full declared extent by the builder, and plain stride drops the final row and column whenever `(n - 1) % stride !== 0` — the real Kampala grid has 745 rows, odd, so stride 2 would drop the southern edge. The border vertices would then display samples from up to `(stride - 1) * 30` metres inland, and that error would compound later: flood polygons and sub-counties snap into the same extent space, so terrain misregistration would be visible against exactly the data the product exists to explain. The round-spread index map `round(i * (n - 1) / (k - 1))` keeps both corners exactly and holds interior jitter under half a source cell (15m at 30m) — while still using ADR-006's recorded dimension formula `floor((n - 1) / stride) + 1`, whose drift across tiers stays within the 0.5% the heightfield validator enforces.
+
+**Q:** Why re-derive `minElevationMeters`/`maxElevationMeters` instead of copying the full grid's band?
+
+**Direct answer:** Because a band is a claim about the payload sitting next to it, and a decimated payload is a different payload. Copied from the full grid, the tier band can be wider than its own samples — harmless-looking until something clamps against it, which is precisely the fixture bug that cost an 80m decode error earlier (a band restating a value computed elsewhere is a second source of truth). Re-deriving makes self-consistency structural: the test asserts `max === Math.max(...samples)` rather than any hardcoded number. The consequence is documented rather than hidden: a tier grid may have a narrower band than the source (a dropped spike disappears), which is why risk readouts must always read the full-resolution grid — the 3D tier is a display surface, never the measurement.
+
+---
+
 ### STORY-001h — Terrain scene contents, wiring, and a flaky gate — 2026-10-07
 
 **Q:** Why does `TerrainScene` split into three components instead of one function with early returns?
