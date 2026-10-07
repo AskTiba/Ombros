@@ -35,9 +35,9 @@ describe('App', () => {
   it('shows a decision-ready risk summary', () => {
     render(<App />);
 
-    const summary = screen.getByTestId('risk-summary');
-    expect(summary).toHaveTextContent(/points/i);
-    expect(summary).toHaveTextContent(/shallow/i);
-    expect(summary).toHaveTextContent(/deep/i);
+    const card = screen.getByTestId('risk-summary-card');
+    expect(card).toHaveTextContent(/points/i);
+    expect(card).toHaveTextContent(/shallow/i);
+    expect(card).toHaveTextContent(/deep/i);
   });
 });

@@ -4,7 +4,7 @@ import { SceneFallback } from '@/features/terrain/SceneFallback';
 import { SceneGate } from '@/features/terrain/SceneGate';
 import { createBaselineScenario } from '@/features/scenario/createBaselineScenario';
 import { Scenario2D } from '@/features/scenario/Scenario2D';
-import { summarizeRisk } from '@/features/scenario/riskSummary';
+import { riskSummaryCard } from '@/features/scenario/riskSummaryCard';
 
 const TerrainScene = lazy(() =>
   import('@/features/terrain/TerrainScene').then((module) => ({
@@ -24,8 +24,6 @@ const BASELINE_SCENARIO = createBaselineScenario({
   ],
 });
 
-const BASELINE_SUMMARY = summarizeRisk(BASELINE_SCENARIO);
-
 export function App() {
   return (
     <main className="min-h-dvh bg-surface-base text-text-primary">
@@ -36,15 +34,12 @@ export function App() {
       <section className="px-6 py-4">
         <Scenario2D scenario={BASELINE_SCENARIO} />
       </section>
+      {riskSummaryCard({ scenario: BASELINE_SCENARIO })}
       <section
         aria-label="Risk summary"
         className="px-6 py-2 text-sm text-text-secondary"
       >
-        <p data-testid="risk-summary">
-          {BASELINE_SUMMARY.totalPoints} points • shallow:{' '}
-          {BASELINE_SUMMARY.depthClassCounts.shallow ?? 0} • deep:{' '}
-          {BASELINE_SUMMARY.depthClassCounts.deep ?? 0}
-        </p>
+        <p data-testid="risk-summary" />
       </section>
       <SceneGate
         scene={TerrainScene}
