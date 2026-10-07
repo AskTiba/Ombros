@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { App } from './App';
 
 describe('App', () => {
@@ -30,5 +30,14 @@ describe('App', () => {
     expect(
       screen.getByRole('img', { name: /Kampala flood extent/i }),
     ).toBeInTheDocument();
+  });
+
+  it('shows a decision-ready risk summary', () => {
+    render(<App />);
+
+    const summary = screen.getByTestId('risk-summary');
+    expect(summary).toHaveTextContent(/points/i);
+    expect(summary).toHaveTextContent(/shallow/i);
+    expect(summary).toHaveTextContent(/deep/i);
   });
 });
