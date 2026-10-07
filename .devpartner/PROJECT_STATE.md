@@ -8,25 +8,26 @@
 
 ## What Currently Works
 
-| Feature / Component                                                               | Verified by                                                    | Date       |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------- |
-| Repo initialized + `.devpartner/` state files seeded                              | `git init`, files on disk                                      | 2026-10-05 |
-| Domain research: problem validated, public data sources confirmed                 | Web research (see ROADMAP → Evidence)                          | 2026-10-05 |
-| Toolchain scaffold: Vite + React 19 + strict TS + Vitest + ESLint                 | `pnpm build`, `pnpm typecheck`, `pnpm lint`                    | 2026-10-05 |
-| Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)                           | `src/lib/geo.test.ts` (12 tests)                               | 2026-10-05 |
-| Flood scenario model + depth classes (`src/features/flood/types.ts`)              | `src/features/flood/types.test.ts` (9 tests)                   | 2026-10-05 |
-| Terrain heightfield builder — `buildHeightfieldGeometry()`                        | `src/features/terrain/heightfield.test.ts` (37 tests)          | 2026-10-05 |
-| Test collection scoped to `src/` only (ERR-003 fixed)                             | 6 files / 116 tests / 16s                                      | 2026-10-05 |
-| Type-check gate actually checks files (ERR-006 fixed)                             | `tsc --listFiles` 263; canary proven to fail                   | 2026-10-05 |
-| CI mirrors the commit gate, order and all                                         | `actionlint` clean; local gate green                           | 2026-10-05 |
-| DEM fetched from the live COG, resampled, quantised, round-tripped                | 643x746, 0.91MB, step 2.93mm, peak at Kololo Hill              | 2026-10-05 |
-| DEM transport layer — fetch → decode with typed failures (`loadDemGrid`)          | `loadDem.test.ts` (7 tests) through MSW                        | 2026-10-06 |
-| WebGL2 probe + scene gate — fallback or lazy scene, never an empty canvas         | `supportsWebGl2.test.ts` (4) + `SceneGate.test.tsx` (3)        | 2026-10-06 |
-| Terrain scene mounted end-to-end — probe → gate → mesh, ×2 exaggeration disclosed | `TerrainScene.test.tsx` (5) + `App.test.tsx` (3); suite 135/10 | 2026-10-07 |
-| Load-time grid decimation for quality tiers — extent-preserving, band re-derived  | `decimateGrid.test.ts` (7 tests)                               | 2026-10-07 |
-| Quality tier model — display-only config, conservative initial selection          | `qualityTiers.test.ts` (8 tests); ADR-013                      | 2026-10-07 |
+| Feature / Component                                                               | Verified by                                                                          | Date       |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------- |
+| Repo initialized + `.devpartner/` state files seeded                              | `git init`, files on disk                                                            | 2026-10-05 |
+| Domain research: problem validated, public data sources confirmed                 | Web research (see ROADMAP → Evidence)                                                | 2026-10-05 |
+| Toolchain scaffold: Vite + React 19 + strict TS + Vitest + ESLint                 | `pnpm build`, `pnpm typecheck`, `pnpm lint`                                          | 2026-10-05 |
+| Kampala bounds + NDC/lon-lat helpers (`src/lib/geo.ts`)                           | `src/lib/geo.test.ts` (12 tests)                                                     | 2026-10-05 |
+| Flood scenario model + depth classes (`src/features/flood/types.ts`)              | `src/features/flood/types.test.ts` (9 tests)                                         | 2026-10-05 |
+| Terrain heightfield builder — `buildHeightfieldGeometry()`                        | `src/features/terrain/heightfield.test.ts` (37 tests)                                | 2026-10-05 |
+| Test collection scoped to `src/` only (ERR-003 fixed)                             | 6 files / 116 tests / 16s                                                            | 2026-10-05 |
+| Type-check gate actually checks files (ERR-006 fixed)                             | `tsc --listFiles` 263; canary proven to fail                                         | 2026-10-05 |
+| CI mirrors the commit gate, order and all                                         | `actionlint` clean; local gate green                                                 | 2026-10-05 |
+| DEM fetched from the live COG, resampled, quantised, round-tripped                | 643x746, 0.91MB, step 2.93mm, peak at Kololo Hill                                    | 2026-10-05 |
+| DEM transport layer — fetch → decode with typed failures (`loadDemGrid`)          | `loadDem.test.ts` (7 tests) through MSW                                              | 2026-10-06 |
+| WebGL2 probe + scene gate — fallback or lazy scene, never an empty canvas         | `supportsWebGl2.test.ts` (4) + `SceneGate.test.tsx` (3)                              | 2026-10-06 |
+| Terrain scene mounted end-to-end — probe → gate → mesh, ×2 exaggeration disclosed | `TerrainScene.test.tsx` (5) + `App.test.tsx` (3); suite 135/10                       | 2026-10-07 |
+| Load-time grid decimation for quality tiers — extent-preserving, band re-derived  | `decimateGrid.test.ts` (7 tests)                                                     | 2026-10-07 |
+| Quality tier model — display-only config, conservative initial selection          | `qualityTiers.test.ts` (8 tests); ADR-013                                            | 2026-10-07 |
+| Runtime frame-time sampler + device-signal adapter                                | `frameRateSampler.test.ts` (8) + `deviceSignals.test.ts` (4) — asymmetric hysteresis | 2026-10-07 |
 
-> 150 tests across 12 files, all green (sequential file runs — ERR-010). `public/data/kampala-dem.bin` is written and gitignored —
+> 162 tests across 14 files, all green (sequential file runs — ERR-010). `public/data/kampala-dem.bin` is written and gitignored —
 > regenerate with `node scripts/fetch-dem.mjs` (needs Node 22.18+/24 for type stripping).
 > With WebGL2, `TerrainScene` mounts the lit terrain mesh in-app; jsdom and
 > no-WebGL2 browsers get `SceneFallback` through the real probe. Sequential test
@@ -37,9 +38,9 @@
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit             | Exact Next Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Files                                                                                  |
-| ------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| STORY-001 — Standing 3D scene over Kampala | Unit 1d-iii (1d-ii done) | **1d-ii shipped.** `QualityTier` = display config only (stride + pixel-ratio cap, ADR-013); `TIER_CONFIGS` high{1,×2}/medium{2,×1.5}/low{4,×1}; `selectInitialTier(signals)` votes on `deviceMemory`/`effectiveType`/`saveData` with the **worst signal winning** and an honest `medium` default when no signal exists — the initial tier can never be `high`; that is reserved for runtime-measured performance (ROADMAP). 8/8 tests. **Exact next action: Unit 1d-iii** — runtime frame-time sampler (pure promote/demote with hysteresis) + thin `useFrame` wiring so the scene self-adjusts, tier → decimate → geometry in `TerrainScene`, `Canvas dpr` cap from the tier, and a disclosure line in the UI. | `src/features/terrain/qualityTiers.ts`; next `frameRateSampler.ts`, `TerrainScene.tsx` |
+| Story/Task                                 | Current Unit             | Exact Next Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Files                                                                                   |
+| ------------------------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| STORY-001 — Standing 3D scene over Kampala | Unit 1d-iv (1d-iii done) | **1d-iii shipped.** `FrameRateSampler`: pure `sampleFrameTime(state, frameTimeMs, options, currentTier)` over 60-frame windows, averaging to fps and rendering a verdict. **Asymmetrical hysteresis**: a sustained under-floor window (25fps over 2.4s) demotes instantly, while promotion needs 3 consecutive over-headroom windows — a surge of headroom is often an empty scene, so promotion is earned; demotion is overdue. Ceilings/floors respected (`high` cannot promote, `low` cannot demote). `readDeviceSignals()` tolerantly reads `navigator.deviceMemory`/`connection` (Firefox/Safari → `{}` → honest medium). 12/12 tests. **Exact next action: Unit 1d-iv** — wire it into `TerrainScene`: `selectInitialTier(readDeviceSignals())` at mount, `useFrame` delta into the sampler, tier → decimate → geometry with disposal on change, `Canvas dpr` capped by `TIER_CONFIGS`, disclosure line showing live tier, and the tier-plan in the report. | `src/features/terrain/frameRateSampler.ts`, `deviceSignals.ts`; next `TerrainScene.tsx` |
 
 > **Sequencing changed 2026-10-06:** Unit 1e (the scene) now comes before Unit 1d (quality tiers). The plan calls for _measured_ tiers, and measuring needs a renderer to measure against — building tier budgets first would mean inventing them (measure before optimizing). 1d follows 1e immediately and plugs into the scene's grid input; a 30m grid at 479,678 vertices is heavy for the mid-range Android this is built for.
 
@@ -85,8 +86,8 @@
 
 ## Planned Next (Prioritized)
 
-1. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002) — **in progress, 1d-ii done**
-2. Unit 1d — adaptive quality tiers (3 tiers, measured against the live scene), including load-time grid decimation — **in progress, 1d-ii done**
+1. Unit 1e — R3F `<Canvas>` mounting the terrain, with the non-WebGL2 fallback (ADR-002) — **in progress, 1d-iii done**
+2. Unit 1d — adaptive quality tiers (3 tiers, measured against the live scene), including load-time grid decimation — **in progress, 1d-iii done**
 3. Unit 2 — flood extent classes → animated water surface
 4. Unit 3 — accessible 2D depth view
 5. Unit 4 — sub-county risk readout

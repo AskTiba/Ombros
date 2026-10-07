@@ -161,6 +161,18 @@ spread them instead of retyping the list.
 
 ---
 
+### STORY-001k — Asymmetrical hysteresis: demote now, promote later — 2026-10-07
+
+**Q:** Why is demotion instant while promotion needs three consecutive 60-frame windows?
+
+**Direct answer:** The two verdicts fail at different costs. A demote verdict fires only after a _full_ 60-frame window averaged under 30fps — at 25fps that is two and a half uninterrupted seconds of a visibly struggling scene, which is not a blip, it is the new normal; waiting longer would burn a mid-range phone (throttling, heat, dropped frame budget for the rest of the whole interaction) for the sake of symmetry. Promotion waits three windows because the shape of the workload is asymmetric in the other direction: headroom often appears precisely when the scene is momentarily cheap (hud closed, orbit settled), and promoting on that spike then demoting again would make the tier line flap in front of the user. So the thresholds themselves carry the hysteresis band (30fps floor, 55fps headroom — nothing between those is acted on), and the `requiredStreak` gate fires only on promote. Direction of error: fail toward demotion.
+
+**Q:** Where did 30 and 55 come from, and what keeps that honest?
+
+**Direct answer:** 30 is the standing target for mid-range Android in the ROADMAP — the floor below which the promise of a usable scene is broken, so it is the demote trigger. 55 is the headroom above a buttery 60fps where promotion to a denser tier is still affordable (a tier promotion adds vertices; you want roughly double the frame budget to absorb it). What keeps it honest is that the thresholds are _configuration in code_, not claims: the sampler is pure and verdict-tested, the UI discloses the active tier, and the Playwright throttled-CPU measurement plan in the ROADMAP exists to check the defaults against a real mid-range device profile rather than my assumptions.
+
+---
+
 ### STORY-001j — The tier model and why capability never buys you 'high' — 2026-10-07
 
 **Q:** Why can't a powerful device start on `high`? Sixteen GB of RAM and a 4g link are exactly what a premium tier is for.
