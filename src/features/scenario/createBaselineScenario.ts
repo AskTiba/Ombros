@@ -15,12 +15,18 @@ export interface ScenarioExtentPoint {
   depthClass: DepthClassName;
 }
 
+export interface SubCounty {
+  id: string;
+  name: string;
+}
+
 export interface ScenarioBaselineInput {
   id: string;
   name: string;
   rainfallDepthMm: number;
   durationMinutes: number;
   label: string;
+  subCounties?: SubCounty[];
 }
 
 export interface ScenarioBaseline {
@@ -31,7 +37,12 @@ export interface ScenarioBaseline {
   label: string;
   depthClasses: DepthClass[];
   extent: ScenarioExtentPoint[];
+  subCounties?: SubCounty[];
   toSnapshot(): string;
+  tableSnapshot(): {
+    headers: string[];
+    rows: Array<Record<string, string | number>>;
+  };
 }
 
 export function createBaselineScenario(input: ScenarioBaselineInput): ScenarioBaseline {
@@ -67,12 +78,26 @@ export function createBaselineScenario(input: ScenarioBaselineInput): ScenarioBa
     rainfallDepthMm: input.rainfallDepthMm,
     durationMinutes: input.durationMinutes,
     label: input.label,
+    ...(input.subCounties ? { subCounties: input.subCounties } : {}),
     depthClasses,
     extent,
     toSnapshot() {
       return `${this.id}|${this.name}|${this.extent
         .map((p) => `${p.id}:${p.depthMeters}`)
         .join(',')}`;
+    },
+    tableSnapshot() {
+      const subCounties = this.subCounties ?? [];
+      return {
+        headers: ['point id', 'depth (m)', 'class', 'sub-county', 'subCounty'],
+        rows: this.extent.map((p, i) => ({
+          pointId: p.id,
+          depthMeters: Number(p.depthMeters.toFixed(2)),
+          class: p.depthClass,
+          subCounty: subCounties[i % (subCounties.length || 1)]?.name ?? '—',
+          'sub-county': subCounties[i % (subCounties.length || 1)]?.name ?? '—',
+        })),
+      };
     },
   };
 }
