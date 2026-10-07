@@ -7,9 +7,45 @@ import type { ScenarioBaseline } from './createBaselineScenario';
  */
 export interface Scenario2DProps {
   scenario: ScenarioBaseline;
+  variant?: 'graphic' | 'table';
 }
 
-export function Scenario2D({ scenario }: Scenario2DProps) {
+export function Scenario2D({ scenario, variant = 'graphic' }: Scenario2DProps) {
+  if (variant === 'table') {
+    const snap = scenario.tableSnapshot();
+    return (
+      <figure aria-label="Flood extent baseline (2D)">
+        <table
+          role="table"
+          aria-label="Flood extent baseline"
+          className="border-collapse text-xs text-text-primary"
+        >
+          <thead>
+            <tr>
+              {snap.headers.slice(0, 4).map((h) => (
+                <th key={h} scope="col" className="border border-white/10 px-2 py-1">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {snap.rows.map((r, i) => (
+              <tr key={`${r.pointId}-${i}`}>
+                <td className="border border-white/10 px-2 py-1">{r.pointId}</td>
+                <td className="border border-white/10 px-2 py-1">{r.depthMeters}</td>
+                <td className="border border-white/10 px-2 py-1">{r.class}</td>
+                <td className="border border-white/10 px-2 py-1">{r['sub-county']}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <figcaption className="text-xs text-text-secondary">
+          Baseline: {scenario.label}
+        </figcaption>
+      </figure>
+    );
+  }
   return (
     <figure aria-label="Flood extent baseline (2D)">
       <svg role="img" aria-labelledby="baseline-title baseline-desc" viewBox="0 0 120 80">
