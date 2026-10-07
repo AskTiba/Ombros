@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { App } from './App';
 
 describe('App', () => {
@@ -21,5 +21,14 @@ describe('App', () => {
     expect(screen.getByTestId('scene-fallback')).toBeInTheDocument();
     expect(screen.getByText(/webgl2/i)).toBeInTheDocument();
     expect(screen.queryByTestId('r3f-canvas')).not.toBeInTheDocument();
+  });
+
+  it('shows the 2D scenario baseline for progressive enhancement', () => {
+    render(<App />);
+
+    expect(screen.getByText(/Baseline: 30 min, 20 mm/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /Kampala flood extent/i }),
+    ).toBeInTheDocument();
   });
 });
