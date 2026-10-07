@@ -81,3 +81,15 @@ export function selectInitialTier(signals: DeviceSignals): QualityTier {
     TIER_RANK[vote] < TIER_RANK[worst] ? vote : worst,
   );
 }
+
+const TIER_LADDER: QualityTier[] = ['low', 'medium', 'high'];
+
+/**
+ * Steps one tier toward the given direction, clamped at the ends — the
+ * runtime sampler's single-notched path. `high` won't climb past the ceiling;
+ * `low` won't fall through the floor.
+ */
+export function adjustTier(tier: QualityTier, direction: -1 | 1): QualityTier {
+  const next = TIER_LADDER.indexOf(tier) + direction;
+  return TIER_LADDER[Math.max(0, Math.min(TIER_LADDER.length - 1, next))];
+}

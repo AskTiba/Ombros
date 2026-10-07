@@ -1,3 +1,4 @@
+import { act } from 'react';
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { BufferGeometry } from 'three';
 import { HttpResponse, http } from 'msw';
@@ -8,15 +9,43 @@ import { DEM_DATA_URL } from '@/features/terrain/loadDem';
 import { server } from '@/test/msw';
 import { encodeDemBinary, rampGrid } from '@/test/demBinaryFixture';
 
+import { decimateGrid } from './decimateGrid';
 import { TerrainScene, VERTICAL_EXAGGERATION } from './TerrainScene';
 
-const captured = vi.hoisted(() => ({ children: null as unknown }));
+const captured = vi.hoisted(() => ({
+  children: null as unknown,
+  canvasProps: {} as Record<string, unknown>,
+  frameCallback: null as ((delta: number) => void) | null,
+  readDeviceSignals: vi.fn(() => ({})),
+}));
+
+type DemBinaryGrid = {
+  samples: Float32Array;
+  rows: number;
+  cols: number;
+  widthMeters: number;
+  depthMeters: number;
+  minElevationMeters: number;
+  maxElevationMeters: number;
+};
 
 vi.mock('@react-three/fiber', () => ({
-  Canvas: (props: { children?: unknown }) => {
+  Canvas: (props: { children?: unknown; dpr?: unknown }) => {
+    captured.canvasProps = { dpr: props.dpr };
     captured.children = props.children;
-    return <div data-testid="r3f-canvas" />;
+    return <div data-testid="r3f-canvas">{props.children as ReactNode}</div>;
   },
+  useFrame: (callback: (state: unknown, delta: number) => void) => {
+    captured.frameCallback = (delta: number) => callback({}, delta);
+  },
+}));
+
+vi.mock('./deviceSignals', () => ({
+  readDeviceSignals: captured.readDeviceSignals,
+}));
+
+vi.mock('./decimateGrid', () => ({
+  decimateGrid: vi.fn((grid: DemBinaryGrid) => grid),
 }));
 
 const serve = (body: ArrayBuffer | null, status = 200) =>
@@ -30,8 +59,21 @@ const meshChild = () => {
     ReactElement<{ geometry?: BufferGeometry }> | undefined;
 };
 
+const playFrames = (deltaSeconds: number, frames: number) => {
+  act(() => {
+    for (let i = 0; i < frames; i += 1) {
+      captured.frameCallback?.(deltaSeconds);
+    }
+  });
+};
+
 afterEach(() => {
   captured.children = null;
+  captured.canvasProps = {};
+  captured.frameCallback = null;
+  captured.readDeviceSignals.mockClear();
+  captured.readDeviceSignals.mockReturnValue({});
+  vi.mocked(decimateGrid).mockClear();
   server.resetHandlers();
 });
 
@@ -92,5 +134,69 @@ describe('TerrainScene', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/connection/i);
     expect(screen.queryByTestId('r3f-canvas')).not.toBeInTheDocument();
+  });
+
+  it('discloses the tier selected from capability signals and caps canvas resolution', async () => {
+    captured.readDeviceSignals.mockReturnValue({ deviceMemoryGb: 2 });
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('tier-disclosure')).toHaveTextContent(
+      /rendering quality: low/i,
+    );
+    expect(captured.canvasProps.dpr).toEqual([1, 1]);
+    expect(vi.mocked(decimateGrid)).toHaveBeenCalledWith(
+      expect.objectContaining({ rows: 3, cols: 4 }),
+      4,
+    );
+  });
+
+  it('discovers no capability signals and defaults the disclosure to medium', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('tier-disclosure')).toHaveTextContent(
+      /rendering quality: medium/i,
+    );
+  });
+
+  it('promotes a tier when sustained headroom is measured and rebuilds at the new stride', async () => {
+    captured.readDeviceSignals.mockReturnValue({ deviceMemoryGb: 2 });
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('tier-disclosure')).toHaveTextContent(
+      /rendering quality: low/i,
+    );
+
+    playFrames(0.0138, 180);
+
+    expect(await screen.findByTestId('tier-disclosure')).toHaveTextContent(
+      /rendering quality: medium/i,
+    );
+    expect(captured.canvasProps.dpr).toEqual([1, 1.5]);
+    expect(vi.mocked(decimateGrid).mock.calls.at(-1)![1]).toBe(2);
+  });
+
+  it('demotes a tier when the frame rate collapses and rebuilds at the coarser stride', async () => {
+    captured.readDeviceSignals.mockReturnValue({ deviceMemoryGb: 16 });
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('tier-disclosure')).toHaveTextContent(
+      /rendering quality: medium/i,
+    );
+
+    playFrames(0.04, 60);
+
+    expect(await screen.findByTestId('tier-disclosure')).toHaveTextContent(
+      /rendering quality: low/i,
+    );
+    expect(captured.canvasProps.dpr).toEqual([1, 1]);
+    expect(vi.mocked(decimateGrid).mock.calls.at(-1)![1]).toBe(4);
   });
 });

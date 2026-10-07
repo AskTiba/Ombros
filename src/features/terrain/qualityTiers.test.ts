@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { decimateGrid } from './decimateGrid';
-import { TIER_CONFIGS, selectInitialTier, type DeviceSignals } from './qualityTiers';
+import {
+  TIER_CONFIGS,
+  adjustTier,
+  selectInitialTier,
+  type DeviceSignals,
+} from './qualityTiers';
 
 describe('selectInitialTier', () => {
   it('defaults to medium when no signal is available', () => {
@@ -75,5 +80,16 @@ describe('TIER_CONFIGS', () => {
     expect(low.rows * low.cols).toBeLessThan(medium.rows * medium.cols);
     expect(low.rows).toBeGreaterThanOrEqual(2);
     expect(low.cols).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('adjustTier', () => {
+  it('moves one notch in the requested direction and clamps at the ends', () => {
+    expect(adjustTier('low', -1)).toBe('low');
+    expect(adjustTier('low', 1)).toBe('medium');
+    expect(adjustTier('medium', 1)).toBe('high');
+    expect(adjustTier('high', 1)).toBe('high');
+    expect(adjustTier('high', -1)).toBe('medium');
+    expect(adjustTier('medium', -1)).toBe('low');
   });
 });
