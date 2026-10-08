@@ -27,7 +27,7 @@
 | Quality tier model — display-only config, conservative initial selection          | `qualityTiers.test.ts` (8 tests); ADR-013                                            | 2026-10-07 |
 | Runtime frame-time sampler + device-signal adapter                                | `frameRateSampler.test.ts` (8) + `deviceSignals.test.ts` (4) — asymmetric hysteresis | 2026-10-07 |
 
-> 177 tests across 21 files, all green (sequential file runs — ERR-010). `public/data/kampala-dem.bin` is written and gitignored —
+> 178 tests across 22 files, all green (sequential file runs — ERR-010). `public/data/kampala-dem.bin` is written and gitignored —
 > regenerate with `node scripts/fetch-dem.mjs` (needs Node 22.18+/24 for type stripping).
 > With WebGL2, `TerrainScene` mounts the lit terrain mesh in-app; jsdom and
 > no-WebGL2 browsers get `SceneFallback` through the real probe. Sequential test

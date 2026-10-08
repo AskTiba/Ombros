@@ -40,4 +40,13 @@ describe('App', () => {
     expect(card).toHaveTextContent(/shallow/i);
     expect(card).toHaveTextContent(/deep/i);
   });
+
+  it('exposes sub-county drilldown controls', () => {
+    render(<App />);
+
+    expect(
+      screen.getByRole('region', { name: /sub-county drilldown/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Makindye/i })).toBeInTheDocument();
+  });
 });

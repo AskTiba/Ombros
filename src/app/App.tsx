@@ -5,6 +5,7 @@ import { SceneGate } from '@/features/terrain/SceneGate';
 import { createBaselineScenario } from '@/features/scenario/createBaselineScenario';
 import { Scenario2D } from '@/features/scenario/Scenario2D';
 import { riskSummaryCard } from '@/features/scenario/riskSummaryCard';
+import { SubCountyDrilldown } from '@/features/scenario/SubCountyDrilldown';
 
 const TerrainScene = lazy(() =>
   import('@/features/terrain/TerrainScene').then((module) => ({
@@ -35,6 +36,7 @@ export function App() {
         <Scenario2D scenario={BASELINE_SCENARIO} />
       </section>
       {riskSummaryCard({ scenario: BASELINE_SCENARIO })}
+      <SubCountyDrilldown scenario={BASELINE_SCENARIO} />
       <section
         aria-label="Risk summary"
         className="px-6 py-2 text-sm text-text-secondary"
