@@ -22,12 +22,16 @@ export function SubCountyDrilldown({ scenario }: SubCountyDrilldownProps) {
 
   return (
     <section aria-label="Sub-county drilldown" className="space-y-3 p-4">
-      <h2 className="text-sm font-medium text-text-primary">Drilldown</h2>
+      <h2 className="text-sm font-medium text-text-primary">Explore a sub-county</h2>
+      <p className="text-xs text-text-secondary">
+        Pick an area to see how many locations flood there and how deep the water gets.
+      </p>
       <div className="flex flex-wrap gap-2">
         {subCounties.map((sc) => (
           <button
             key={sc.id}
             type="button"
+            aria-pressed={selected === sc.name}
             className="rounded border border-border px-3 py-1 text-xs"
             onClick={() => setSelected(sc.name)}
           >
@@ -37,8 +41,8 @@ export function SubCountyDrilldown({ scenario }: SubCountyDrilldownProps) {
       </div>
       {selected && selectedStats && (
         <div data-testid="drilldown-stats" className="text-xs text-text-secondary">
-          {selected}: total {selectedStats.total} • shallow {selectedStats.shallow} • deep{' '}
-          {selectedStats.deep}
+          {selected}: {selectedStats.total} locations total · {selectedStats.shallow}{' '}
+          shallow · {selectedStats.deep} deep
         </div>
       )}
     </section>

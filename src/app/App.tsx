@@ -7,6 +7,7 @@ import { Scenario2D } from '@/features/scenario/Scenario2D';
 import { riskSummaryCard } from '@/features/scenario/riskSummaryCard';
 import { SubCountyDrilldown } from '@/features/scenario/SubCountyDrilldown';
 import { riskReport } from '@/features/scenario/riskReport';
+import { Hero } from './Hero';
 
 const TerrainScene = lazy(() =>
   import('@/features/terrain/TerrainScene').then((module) => ({
@@ -44,6 +45,7 @@ export function App() {
         </div>
       </header>
       <main id="main-content" className="mx-auto w-full max-w-3xl space-y-6 px-6 py-6">
+        <Hero />
         <section aria-label="Flood extent baseline">
           <Scenario2D scenario={BASELINE_SCENARIO} />
         </section>

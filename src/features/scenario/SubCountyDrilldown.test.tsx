@@ -28,4 +28,21 @@ describe('SubCountyDrilldown', () => {
       /shallow|deep|total/i,
     );
   });
+
+  it('tells a first-time user what to do with the controls', () => {
+    const scenario = createBaselineScenario({
+      id: 'baseline-a',
+      name: '30-min, 20mm',
+      rainfallDepthMm: 20,
+      durationMinutes: 30,
+      label: 'Baseline A',
+      subCounties: [
+        { id: 'lc1', name: 'Makindye' },
+        { id: 'lc2', name: 'Rubaga' },
+      ],
+    });
+
+    render(<SubCountyDrilldown scenario={scenario} />);
+    expect(screen.getByText(/pick an area|select an area/i)).toBeInTheDocument();
+  });
 });

@@ -68,8 +68,32 @@ export function Scenario2D({ scenario, variant = 'graphic' }: Scenario2DProps) {
           })}
         </g>
       </svg>
-      <figcaption className="text-xs text-text-secondary">
-        Baseline: {scenario.label}
+      <ul
+        data-testid="depth-legend"
+        className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary"
+      >
+        {scenario.depthClasses.map((depthClass) => (
+          <li key={depthClass.name} className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="inline-block h-3 w-3 rounded-full"
+              style={{
+                backgroundColor:
+                  depthClass.name === 'deep'
+                    ? 'var(--color-water-300)'
+                    : 'var(--color-water-100)',
+              }}
+            />
+            <span>
+              {depthClass.name} (≥ {depthClass.depthMeters} m)
+            </span>
+          </li>
+        ))}
+      </ul>
+      <figcaption className="mt-2 space-y-1 text-xs text-text-secondary">
+        Baseline: {scenario.label} — the result of {scenario.rainfallDepthMm} mm of rain
+        falling in {scenario.durationMinutes} minutes. Each dot is one modelled flood
+        location.
       </figcaption>
     </figure>
   );

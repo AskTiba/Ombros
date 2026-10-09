@@ -40,8 +40,12 @@ export function riskReport({
       className="rounded-md border border-border bg-surface-raised/40 p-4 text-xs text-text-secondary"
     >
       <h2 className="text-sm font-medium text-text-primary">Decision-ready report</h2>
-      <p>{result.reportTitle}</p>
-      <ul className="list-disc pl-5">
+      <p className="mt-1">
+        A one-page summary of every modelled flood location — ready to hand to a planner,
+        insurer, or funding body.
+      </p>
+      <p className="mt-2">{result.reportTitle}</p>
+      <ul className="mt-1 list-disc pl-5">
         {result.items.map((item) => (
           <li key={item.pointId}>
             {item.pointId}: {item.riskClass} ({item.depthMeters.toFixed(2)}m) —{' '}
@@ -52,9 +56,9 @@ export function riskReport({
       <button
         type="button"
         onClick={handleExport}
-        className="rounded border border-border px-3 py-1 text-xs text-text-primary"
+        className="mt-3 rounded border border-border px-3 py-1 text-xs text-text-primary"
       >
-        Export JSON
+        Export report (JSON)
       </button>
     </section>
   );

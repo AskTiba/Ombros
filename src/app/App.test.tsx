@@ -71,4 +71,11 @@ describe('App', () => {
     const header = screen.getByTestId('app-header');
     expect(header.className).toMatch(/sticky/);
   });
+
+  it('tells a first-time user what the tool is for', () => {
+    render(<App />);
+
+    // The value proposition is the first heading after the product h1.
+    expect(screen.getByRole('heading', { level: 2, name: /flood/i })).toBeInTheDocument();
+  });
 });

@@ -40,4 +40,29 @@ describe('Scenario2D', () => {
       expect(fill).not.toMatch(/^#/);
     }
   });
+
+  it('explains what the dots are, how deep, and the rainfall in plain words', () => {
+    const scenario = createBaselineScenario({
+      id: 'baseline-a',
+      name: '30-min, 20mm',
+      rainfallDepthMm: 20,
+      durationMinutes: 30,
+      label: 'Baseline A',
+    });
+
+    const { container } = render(<Scenario2D scenario={scenario} />);
+    const text = container.textContent ?? '';
+
+    // A legend that carries the depth-class thresholds (ADR-003 values).
+    expect(container.querySelector('[data-testid="depth-legend"]')).toBeTruthy();
+    expect(text).toMatch(/0\.15/);
+    expect(text).toMatch(/0\.5/);
+    expect(text).toMatch(/shallow/i);
+    expect(text).toMatch(/deep/i);
+
+    // Plain-language reading of the scenario: what fell, how long, what a dot is.
+    expect(text).toMatch(/rain/i);
+    expect(text).toMatch(/30 minutes/i);
+    expect(text).toMatch(/flood location/i);
+  });
 });
