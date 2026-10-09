@@ -48,26 +48,33 @@ export function Scenario2D({ scenario, variant = 'graphic' }: Scenario2DProps) {
   }
   return (
     <figure aria-label="Flood extent baseline (2D)">
-      <svg role="img" aria-labelledby="baseline-title baseline-desc" viewBox="0 0 120 80">
-        <title id="baseline-title">Kampala flood extent — baseline</title>
-        <desc id="baseline-desc">
-          Two sample points showing shallow and deep flood depths
-        </desc>
-        <g>
-          {scenario.extent.map((point) => {
-            const cx = 40 + (point.coords.coordinates[0] - 32.586) * 2000;
-            const cy = 60 - (point.coords.coordinates[1] - 0.313) * 8000;
-            const r = point.depthClass === 'deep' ? 8 : 5;
-            const fill =
-              point.depthClass === 'deep'
-                ? 'var(--color-water-300)'
-                : 'var(--color-water-100)';
-            return (
-              <circle key={point.id} cx={cx} cy={cy} r={r} fill={fill} opacity={0.7} />
-            );
-          })}
-        </g>
-      </svg>
+      <div className="rounded-lg border border-border bg-surface-overlay p-3">
+        <svg
+          role="img"
+          aria-labelledby="baseline-title baseline-desc"
+          viewBox="0 0 120 80"
+          className="w-full"
+        >
+          <title id="baseline-title">Kampala flood extent — baseline</title>
+          <desc id="baseline-desc">
+            Two sample points showing shallow and deep flood depths
+          </desc>
+          <g>
+            {scenario.extent.map((point) => {
+              const cx = 40 + (point.coords.coordinates[0] - 32.586) * 2000;
+              const cy = 60 - (point.coords.coordinates[1] - 0.313) * 8000;
+              const r = point.depthClass === 'deep' ? 8 : 5;
+              const fill =
+                point.depthClass === 'deep'
+                  ? 'var(--color-water-300)'
+                  : 'var(--color-water-100)';
+              return (
+                <circle key={point.id} cx={cx} cy={cy} r={r} fill={fill} opacity={0.7} />
+              );
+            })}
+          </g>
+        </svg>
+      </div>
       <ul
         data-testid="depth-legend"
         className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary"

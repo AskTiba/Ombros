@@ -27,34 +27,31 @@ const STEPS = [
 
 export function Hero(): ReactNode {
   return (
-    <section aria-labelledby="hero-heading" className="space-y-5">
-      <div className="space-y-3">
+    <section aria-labelledby="hero-heading" className="rise space-y-6 pt-2">
+      <div className="max-w-2xl space-y-4">
         <h2
           id="hero-heading"
-          className="text-xl font-semibold tracking-tight text-balance"
+          className="text-3xl font-semibold tracking-tight text-balance"
         >
           See where Kampala floods — and how deep.
         </h2>
-        <p className="max-w-prose text-text-secondary">
+        <p className="text-base leading-relaxed text-text-secondary">
           Ombros turns peer-reviewed flood science into a tool you can use: explore a
           modelled rainfall scenario, find which locations go under, pick a sub-county for
           its numbers, and export a decision-ready report for planners, insurers, and
           developers.
         </p>
       </div>
-      <ol className="grid gap-3 sm:grid-cols-3">
+      <ol className="grid gap-4 sm:grid-cols-3">
         {STEPS.map((step, index) => (
-          <li
-            key={step.title}
-            className="rounded-lg border border-border bg-surface-raised p-4"
-          >
+          <li key={step.title} className="card flex flex-col gap-2 p-4">
             <span
               aria-hidden="true"
-              className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-bold text-surface-base"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-strong text-sm font-bold text-surface-base"
             >
               {index + 1}
             </span>
-            <p className="font-medium">{step.title}</p>
+            <p className="font-semibold text-text-primary">{step.title}</p>
             <p className="text-sm text-text-secondary">{step.body}</p>
           </li>
         ))}

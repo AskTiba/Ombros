@@ -45,4 +45,21 @@ describe('riskSummaryCard', () => {
     // Says what a "point" actually is so the count is readable.
     expect(card).toHaveTextContent(/location/i);
   });
+
+  it('presents the headline figures as three KPI stat tiles', () => {
+    const scenario = createBaselineScenario({
+      id: 'baseline-a',
+      name: '30-min, 20mm',
+      rainfallDepthMm: 20,
+      durationMinutes: 30,
+      label: 'Baseline A',
+      subCounties: [
+        { id: 'lc1', name: 'Makindye' },
+        { id: 'lc2', name: 'Rubaga' },
+      ],
+    });
+
+    render(riskSummaryCard({ scenario }));
+    expect(screen.getAllByTestId('kpi')).toHaveLength(3);
+  });
 });

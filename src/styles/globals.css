@@ -76,6 +76,8 @@
   --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.0625rem);
   --text-lg: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
   --text-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.75rem);
+  --text-2xl: clamp(1.5rem, 1.3rem + 1vw, 2.125rem);
+  --text-3xl: clamp(1.875rem, 1.5rem + 1.75vw, 3rem);
 
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -153,7 +155,9 @@ body {
   z-index: 20;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  background-color: var(--color-accent);
+  /* accent-strong, not accent: white-on-accent is only 3.57:1 in light
+     theme, and this is normal-size text that needs 4.5:1 (5.22:1 here). */
+  background-color: var(--color-accent-strong);
   color: var(--color-surface-base);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -163,6 +167,95 @@ body {
 .skip-link:focus {
   left: var(--space-4);
   top: var(--space-4);
+}
+
+/*
+ * Shared card surface — one elevation treatment so panels read as a system,
+ * not a style soup. Elevation comes from surface contrast + a soft shadow;
+ * no hover lift, since these panels are not individually clickable (a hover
+ * that implies an action the panel does not have is a false affordance).
+ */
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-surface-raised);
+  box-shadow: var(--shadow-sm);
+}
+
+/*
+ * Button system: a 44px minimum touch target (Apple HIG / Material), one
+ * shared shape, and two tones. Primary sits on accent-strong so its label
+ * clears 4.5:1 in both themes (accent itself is too mid-tone for white or
+ * dark text). Secondary toggles expose state via aria-pressed — selected
+ * fills with the accent, and state is never colour-only (the pressed button
+ * also reads its own name to assistive tech).
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding-inline: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    filter var(--duration-fast) var(--ease-out);
+}
+
+.btn-primary {
+  background-color: var(--color-accent-strong);
+  color: var(--color-surface-base);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-surface-overlay);
+  border-color: var(--color-border-strong);
+}
+
+.btn-secondary[aria-pressed='true'] {
+  background-color: var(--color-accent-strong);
+  border-color: transparent;
+  color: var(--color-surface-base);
+}
+
+/*
+ * Entrance for the main panels. Base state is visible (opacity only lives in
+ * the keyframes), so if the animation never runs the content still shows. The
+ * global reduced-motion rule collapses the duration to a single frame.
+ */
+.rise {
+  animation: rise var(--duration-slow) var(--ease-out) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /*

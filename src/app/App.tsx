@@ -37,21 +37,31 @@ export function App() {
         data-testid="app-header"
         className="sticky top-0 z-10 border-b border-border bg-surface-base/80 backdrop-blur-md"
       >
-        <div className="mx-auto flex w-full max-w-3xl items-baseline gap-3 px-6 py-4">
+        <div className="mx-auto flex w-full max-w-5xl items-baseline gap-3 px-4 py-4 sm:px-6">
           <h1 className="text-lg font-semibold tracking-tight">Ombros</h1>
-          <p className="text-sm text-text-secondary">
+          <p className="hidden text-sm text-text-secondary sm:block">
             Flood risk intelligence for Kampala
           </p>
         </div>
       </header>
-      <main id="main-content" className="mx-auto w-full max-w-3xl space-y-6 px-6 py-6">
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 sm:px-6"
+      >
         <Hero />
-        <section aria-label="Flood extent baseline">
-          <Scenario2D scenario={BASELINE_SCENARIO} />
-        </section>
         {riskSummaryCard({ scenario: BASELINE_SCENARIO })}
-        <SubCountyDrilldown scenario={BASELINE_SCENARIO} />
-        {riskReport({ scenario: BASELINE_SCENARIO, shallowMaxM: 0.3, deepMinM: 0.4 })}
+        <section aria-label="Flood extent baseline" className="card rise p-5">
+          <h3 className="text-base font-semibold text-text-primary">
+            Baseline flood map
+          </h3>
+          <div className="mt-3">
+            <Scenario2D scenario={BASELINE_SCENARIO} />
+          </div>
+        </section>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SubCountyDrilldown scenario={BASELINE_SCENARIO} />
+          {riskReport({ scenario: BASELINE_SCENARIO, shallowMaxM: 0.3, deepMinM: 0.4 })}
+        </div>
         <SceneGate
           scene={TerrainScene}
           fallback={<SceneFallback />}

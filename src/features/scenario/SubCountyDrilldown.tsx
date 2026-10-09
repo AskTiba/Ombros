@@ -21,18 +21,18 @@ export function SubCountyDrilldown({ scenario }: SubCountyDrilldownProps) {
     : null;
 
   return (
-    <section aria-label="Sub-county drilldown" className="space-y-3 p-4">
-      <h2 className="text-sm font-medium text-text-primary">Explore a sub-county</h2>
-      <p className="text-xs text-text-secondary">
+    <section aria-label="Sub-county drilldown" className="card rise flex flex-col p-5">
+      <h2 className="text-base font-semibold text-text-primary">Explore a sub-county</h2>
+      <p className="mt-1 text-sm text-text-secondary">
         Pick an area to see how many locations flood there and how deep the water gets.
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {subCounties.map((sc) => (
           <button
             key={sc.id}
             type="button"
             aria-pressed={selected === sc.name}
-            className="rounded border border-border px-3 py-1 text-xs"
+            className="btn btn-secondary"
             onClick={() => setSelected(sc.name)}
           >
             {sc.name}
@@ -40,9 +40,13 @@ export function SubCountyDrilldown({ scenario }: SubCountyDrilldownProps) {
         ))}
       </div>
       {selected && selectedStats && (
-        <div data-testid="drilldown-stats" className="text-xs text-text-secondary">
-          {selected}: {selectedStats.total} locations total · {selectedStats.shallow}{' '}
-          shallow · {selectedStats.deep} deep
+        <div
+          data-testid="drilldown-stats"
+          className="mt-4 rounded-lg bg-surface-overlay p-3 text-sm text-text-secondary"
+        >
+          <span className="font-medium text-text-primary">{selected}</span>:{' '}
+          {selectedStats.total} locations total · {selectedStats.shallow} shallow ·{' '}
+          {selectedStats.deep} deep
         </div>
       )}
     </section>
