@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { applyRiskThresholds } from './riskThresholds';
+import { exportReport } from './exportReport';
 import type { ScenarioBaseline } from './createBaselineScenario';
 
 export interface RiskReportProps {
@@ -18,6 +19,20 @@ export function riskReport({
     shallowMaxM,
     deepMinM,
   });
+  const handleExport = () => {
+    const json = exportReport(scenario, {
+      shallowMaxM,
+      deepMinM,
+      format: 'json',
+    });
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${scenario.id}-report.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <section
       aria-label="Risk report"
@@ -34,6 +49,13 @@ export function riskReport({
           </li>
         ))}
       </ul>
+      <button
+        type="button"
+        onClick={handleExport}
+        className="rounded border border-white/10 px-3 py-1 text-xs text-text-primary"
+      >
+        Export JSON
+      </button>
     </section>
   );
 }
