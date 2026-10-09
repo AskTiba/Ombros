@@ -49,4 +49,11 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Makindye/i })).toBeInTheDocument();
   });
+
+  it('shows a decision-ready report section', () => {
+    render(<App />);
+
+    expect(screen.getByRole('region', { name: /risk report/i })).toBeInTheDocument();
+    expect(screen.getByTestId('risk-report')).toHaveTextContent(/Decision-ready/i);
+  });
 });
