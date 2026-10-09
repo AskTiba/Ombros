@@ -28,7 +28,7 @@ export function SubCountyDrilldown({ scenario }: SubCountyDrilldownProps) {
           <button
             key={sc.id}
             type="button"
-            className="rounded border border-white/10 px-3 py-1 text-xs"
+            className="rounded border border-border px-3 py-1 text-xs"
             onClick={() => setSelected(sc.name)}
           >
             {sc.name}

@@ -13,7 +13,7 @@ export function riskSummaryCard({ scenario }: RiskSummaryCardProps): ReactNode {
     <section
       aria-label="Risk summary"
       data-testid="risk-summary-card"
-      className="rounded-md border border-white/10 bg-surface-raised/40 p-4 text-sm text-text-secondary"
+      className="rounded-md border border-border bg-surface-raised p-4 text-sm text-text-secondary"
     >
       <h2 className="text-sm font-medium text-text-primary">Decision-ready summary</h2>
       <p>

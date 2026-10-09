@@ -37,7 +37,7 @@ export function riskReport({
     <section
       aria-label="Risk report"
       data-testid="risk-report"
-      className="rounded-md border border-white/10 bg-surface-raised/40 p-4 text-xs text-text-secondary"
+      className="rounded-md border border-border bg-surface-raised/40 p-4 text-xs text-text-secondary"
     >
       <h2 className="text-sm font-medium text-text-primary">Decision-ready report</h2>
       <p>{result.reportTitle}</p>
@@ -52,7 +52,7 @@ export function riskReport({
       <button
         type="button"
         onClick={handleExport}
-        className="rounded border border-white/10 px-3 py-1 text-xs text-text-primary"
+        className="rounded border border-border px-3 py-1 text-xs text-text-primary"
       >
         Export JSON
       </button>

@@ -38,9 +38,9 @@
 
 ## In Progress (Exact Next Step)
 
-| Story/Task                                 | Current Unit                             | Exact Next Action                                                                                                                                                                                                                                                                                                                    | Files                                                |
-| ------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| STORY-001 — Standing 3D scene over Kampala | Unit 7a complete (scenario water config) | **Unit 7a complete.** App shell now renders `Scenario2D` with a deterministic baseline and keeps the 3D terrain behind `SceneGate` (WebGL2 probe). This preserves the accessible 2D path per ADR-002. Tests cover 2D presence. **Next action: Unit 3a** — add sub-county labels/metadata to baseline or a separate 2D table variant. | src/app/App.tsx, src/app/App.test.tsx; next 2D table |
+| Story/Task                                 | Current Unit                               | Exact Next Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Files                                              |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| STORY-001 — Standing 3D scene over Kampala | Unit A complete (design-system foundation) | **Unit A complete.** Design tokens rewritten to "Water-Clarity Teal" with full light/dark/system theming (ADR-014): `@theme` emits semantic tokens to `:root`, a `prefers-color-scheme: dark` block overrides them, `color-scheme: light dark` lets OS chrome follow. Scenario2D hex fills tokenized; hardcoded `border-white/10` replaced with the `border` token. **Next action: Unit B** — App shell + responsive layout (sticky header, skip link, safe-area insets), then Unit C component craft. | src/styles/globals.css, index.html, Scenario2D.tsx |
 
 > **Sequencing changed 2026-10-06:** Unit 1e (the scene) now comes before Unit 1d (quality tiers). The plan calls for _measured_ tiers, and measuring needs a renderer to measure against — building tier budgets first would mean inventing them (measure before optimizing). 1d follows 1e immediately and plugs into the scene's grid input; a 30m grid at 479,678 vertices is heavy for the mid-range Android this is built for.
 
@@ -174,6 +174,14 @@ pnpm format       # prettier --write .
 - **CI mirrors the commit gate exactly:** format check → lint → type-check → test → build,
   in that order. `.github/workflows/ci.yml` must not diverge from what runs locally; a
   divergence is a gap, not a convenience. `actionlint` clean is part of the gate.
+- **Design system (ADR-014):** "Water-Clarity Teal". Tokens live in `src/styles/globals.css`
+  under Tailwind v4 `@theme` (emitted to `:root`); components reference token utilities
+  (`bg-surface-*`, `text-text-*`, `border-border`, `text-accent`) — never hardcoded hex.
+  Theming is light/dark/system: light is the default `@theme` value, dark is a
+  `prefers-color-scheme: dark` override on `:root`; `color-scheme: light dark` lets OS chrome
+  follow. Depth-class ramp (`--color-water-100/200/300`) is data encoding (ADR-003), single-hue,
+  shared meaning across themes. Content-based breakpoints: mobile ~320–599, tablet ~600–1023,
+  desktop ≥1024 — prefer fluid `clamp()` type and grid over breakpoint nudges.
 
 ### Environment Setup
 

@@ -23,7 +23,7 @@ export function Scenario2D({ scenario, variant = 'graphic' }: Scenario2DProps) {
           <thead>
             <tr>
               {snap.headers.slice(0, 4).map((h) => (
-                <th key={h} scope="col" className="border border-white/10 px-2 py-1">
+                <th key={h} scope="col" className="border border-border px-2 py-1">
                   {h}
                 </th>
               ))}
@@ -32,10 +32,10 @@ export function Scenario2D({ scenario, variant = 'graphic' }: Scenario2DProps) {
           <tbody>
             {snap.rows.map((r, i) => (
               <tr key={`${r.pointId}-${i}`}>
-                <td className="border border-white/10 px-2 py-1">{r.pointId}</td>
-                <td className="border border-white/10 px-2 py-1">{r.depthMeters}</td>
-                <td className="border border-white/10 px-2 py-1">{r.class}</td>
-                <td className="border border-white/10 px-2 py-1">{r['sub-county']}</td>
+                <td className="border border-border px-2 py-1">{r.pointId}</td>
+                <td className="border border-border px-2 py-1">{r.depthMeters}</td>
+                <td className="border border-border px-2 py-1">{r.class}</td>
+                <td className="border border-border px-2 py-1">{r['sub-county']}</td>
               </tr>
             ))}
           </tbody>
@@ -58,15 +58,12 @@ export function Scenario2D({ scenario, variant = 'graphic' }: Scenario2DProps) {
             const cx = 40 + (point.coords.coordinates[0] - 32.586) * 2000;
             const cy = 60 - (point.coords.coordinates[1] - 0.313) * 8000;
             const r = point.depthClass === 'deep' ? 8 : 5;
+            const fill =
+              point.depthClass === 'deep'
+                ? 'var(--color-water-300)'
+                : 'var(--color-water-100)';
             return (
-              <circle
-                key={point.id}
-                cx={cx}
-                cy={cy}
-                r={r}
-                fill={point.depthClass === 'deep' ? '#1e88e5' : '#90caf9'}
-                opacity={0.7}
-              />
+              <circle key={point.id} cx={cx} cy={cy} r={r} fill={fill} opacity={0.7} />
             );
           })}
         </g>
