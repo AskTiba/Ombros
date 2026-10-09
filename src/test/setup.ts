@@ -15,10 +15,10 @@ afterAll(() => {
 });
 
 if (typeof URL.createObjectURL === 'undefined') {
-  // @ts-ignore
-  URL.createObjectURL = () => 'blob:mock';
+  (URL as unknown as { createObjectURL: typeof URL.createObjectURL }).createObjectURL =
+    (() => 'blob:mock') as typeof URL.createObjectURL;
 }
 if (typeof URL.revokeObjectURL === 'undefined') {
-  // @ts-ignore
-  URL.revokeObjectURL = () => {};
+  (URL as unknown as { revokeObjectURL: typeof URL.revokeObjectURL }).revokeObjectURL =
+    (() => {}) as typeof URL.revokeObjectURL;
 }
