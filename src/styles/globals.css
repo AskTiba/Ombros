@@ -141,6 +141,31 @@ body {
 }
 
 /*
+ * Skip-to-content link. Off-screen until focused, then pinned to the top-left
+ * so keyboard users can jump the header without tabbing through it (WCAG 2.2
+ * AA — bypass blocks). Uses a clip rectangle rather than display:none so the
+ * link stays in the tab order.
+ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 20;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-accent);
+  color: var(--color-surface-base);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--space-4);
+  top: var(--space-4);
+}
+
+/*
  * Respect the OS reduced-motion setting globally. The 3D scene reads this
  * via matchMedia to stop camera easing and water animation.
  */

@@ -28,32 +28,38 @@ const BASELINE_SCENARIO = createBaselineScenario({
 
 export function App() {
   return (
-    <main className="min-h-dvh bg-surface-base text-text-primary">
-      <header className="border-b border-border px-6 py-4">
-        <h1 className="text-lg font-semibold tracking-tight">Ombros</h1>
-        <p className="text-sm text-text-secondary">Flood risk intelligence for Kampala</p>
-      </header>
-      <section className="px-6 py-4">
-        <Scenario2D scenario={BASELINE_SCENARIO} />
-      </section>
-      {riskSummaryCard({ scenario: BASELINE_SCENARIO })}
-      <SubCountyDrilldown scenario={BASELINE_SCENARIO} />
-      {riskReport({ scenario: BASELINE_SCENARIO, shallowMaxM: 0.3, deepMinM: 0.4 })}
-      <section
-        aria-label="Risk summary"
-        className="px-6 py-2 text-sm text-text-secondary"
+    <div className="min-h-dvh bg-surface-base text-text-primary">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      <header
+        data-testid="app-header"
+        className="sticky top-0 z-10 border-b border-border bg-surface-base/80 backdrop-blur-md"
       >
-        <p data-testid="risk-summary" />
-      </section>
-      <SceneGate
-        scene={TerrainScene}
-        fallback={<SceneFallback />}
-        loading={
-          <p role="status" className="grid min-h-[60dvh] place-items-center p-6">
-            Loading 3D scene…
+        <div className="mx-auto flex w-full max-w-3xl items-baseline gap-3 px-6 py-4">
+          <h1 className="text-lg font-semibold tracking-tight">Ombros</h1>
+          <p className="text-sm text-text-secondary">
+            Flood risk intelligence for Kampala
           </p>
-        }
-      />
-    </main>
+        </div>
+      </header>
+      <main id="main-content" className="mx-auto w-full max-w-3xl space-y-6 px-6 py-6">
+        <section aria-label="Flood extent baseline">
+          <Scenario2D scenario={BASELINE_SCENARIO} />
+        </section>
+        {riskSummaryCard({ scenario: BASELINE_SCENARIO })}
+        <SubCountyDrilldown scenario={BASELINE_SCENARIO} />
+        {riskReport({ scenario: BASELINE_SCENARIO, shallowMaxM: 0.3, deepMinM: 0.4 })}
+        <SceneGate
+          scene={TerrainScene}
+          fallback={<SceneFallback />}
+          loading={
+            <p role="status" className="grid min-h-[60dvh] place-items-center p-6">
+              Loading 3D scene…
+            </p>
+          }
+        />
+      </main>
+    </div>
   );
 }

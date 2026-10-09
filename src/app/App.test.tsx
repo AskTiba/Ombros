@@ -56,4 +56,19 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: /risk report/i })).toBeInTheDocument();
     expect(screen.getByTestId('risk-report')).toHaveTextContent(/Decision-ready/i);
   });
+
+  it('offers a skip-to-content link that targets the main landmark', () => {
+    render(<App />);
+
+    const skip = screen.getByRole('link', { name: /skip to content/i });
+    expect(skip).toHaveAttribute('href', '#main-content');
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
+  });
+
+  it('keeps the product header sticky so orientation persists on scroll', () => {
+    render(<App />);
+
+    const header = screen.getByTestId('app-header');
+    expect(header.className).toMatch(/sticky/);
+  });
 });
