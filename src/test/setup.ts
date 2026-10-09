@@ -13,3 +13,12 @@ afterEach(() => {
 afterAll(() => {
   server.close();
 });
+
+if (typeof URL.createObjectURL === 'undefined') {
+  // @ts-ignore
+  URL.createObjectURL = () => 'blob:mock';
+}
+if (typeof URL.revokeObjectURL === 'undefined') {
+  // @ts-ignore
+  URL.revokeObjectURL = () => {};
+}
