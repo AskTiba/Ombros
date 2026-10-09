@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
+import { BufferAttribute } from 'three';
 
+import { buildHypsometricColors } from '@/features/terrain/hypsometric';
 import { buildHeightfieldGeometry } from '@/features/terrain/heightfield';
 import {
   loadDemGrid,
@@ -25,8 +28,22 @@ import { readDeviceSignals } from '@/features/terrain/deviceSignals';
 /**
  * Single disclosed vertical exaggeration (ADR-005): a number that can be
  * stated in the UI here and in the generated risk report later.
+ *
+ * The study extent carries only **192m** of relief across ~22km — 1,125.5m at
+ * the Lake Victoria shoreline up to 1,317.6m at Kololo Hill. At ×2 that is a
+ * 1.72% height-to-depth ratio, which reads as a flat sheet however the scene
+ * is lit. ×4 brings it to 3.4%: hills read as hills while staying one
+ * disclosed number rather than a hidden fudge.
+ *
+ * Deliberately not much higher. The DEM is smooth in absolute terms — 0.65m
+ * RMS high-frequency deviation — but at cell scale that is *larger* than the
+ * 0.26m regional step, so exaggeration amplifies cell noise faster than it
+ * amplifies the hills you are trying to show. Past roughly ×6 the shading
+ * starts following DEM noise instead of topography and the city turns into a
+ * bed of spikes. `TerrainScene.test.tsx` pins the caption to this constant, so
+ * geometry and disclosure cannot drift apart.
  */
-export const VERTICAL_EXAGGERATION = 2;
+export const VERTICAL_EXAGGERATION = 4;
 
 export function TerrainScene() {
   const [result, setResult] = useState<DemLoadResult | null>(null);
@@ -98,21 +115,33 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
     [grid, tier],
   );
 
-  const geometry = useMemo(
-    () =>
-      buildHeightfieldGeometry({
-        samples: tierGrid.samples,
-        rows: tierGrid.rows,
-        cols: tierGrid.cols,
-        extent: {
-          widthMeters: tierGrid.widthMeters,
-          depthMeters: tierGrid.depthMeters,
-        },
-        verticalExaggeration: VERTICAL_EXAGGERATION,
-        baseElevationMeters: tierGrid.minElevationMeters,
-      }),
-    [tierGrid],
-  );
+  const geometry = useMemo(() => {
+    const built = buildHeightfieldGeometry({
+      samples: tierGrid.samples,
+      rows: tierGrid.rows,
+      cols: tierGrid.cols,
+      extent: {
+        widthMeters: tierGrid.widthMeters,
+        depthMeters: tierGrid.depthMeters,
+      },
+      verticalExaggeration: VERTICAL_EXAGGERATION,
+      // The original band, not the decimated grid's: a quality-tier change
+      // must not slide the terrain's base height or re-tint it mid-frame.
+      baseElevationMeters: grid.minElevationMeters,
+    });
+    built.setAttribute(
+      'color',
+      new BufferAttribute(
+        buildHypsometricColors(
+          tierGrid.samples,
+          grid.minElevationMeters,
+          grid.maxElevationMeters,
+        ),
+        3,
+      ),
+    );
+    return built;
+  }, [tierGrid, grid.minElevationMeters, grid.maxElevationMeters]);
 
   useEffect(() => {
     return () => {
@@ -121,33 +150,68 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
   }, [geometry]);
 
   return (
-    <section
-      aria-label="3D terrain of Kampala"
-      className="grid min-h-[60dvh] place-items-center"
-    >
-      <Canvas
-        camera={{ position: [0, 8000, 18000], fov: 50, near: 100, far: 60000 }}
-        onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
-        dpr={[1, TIER_CONFIGS[tier].maxPixelRatio]}
-      >
-        <QualitySampler tier={tier} onTierChange={setTier} />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[6000, 10000, 6000]} intensity={1.4} />
-        <mesh geometry={geometry}>
-          <meshStandardMaterial color="#8f9b6b" roughness={0.95} metalness={0} />
-        </mesh>
-      </Canvas>
-      <p className="pb-4 text-center text-xs text-text-secondary">
-        Vertical exaggeration ×{VERTICAL_EXAGGERATION} — terrain from Copernicus DEM
-        GLO-30 at 30m
-      </p>
-      <p
-        data-testid="tier-disclosure"
-        aria-live="polite"
-        className="pb-4 text-center text-xs text-text-secondary"
-      >
-        Rendering quality: {tier} — adjusted to your device and connection
-      </p>
+    <section aria-label="3D terrain of Kampala" className="card overflow-hidden">
+      {/*
+        The viewport owns an explicit height so the R3F container can never
+        collapse to zero, and the gradient behind the (transparent) canvas
+        lifts the terrain out of a flat page-coloured void. It reads through
+        var(), so the scene follows the OS theme with no JS.
+      */}
+      <div className="scene-viewport relative h-[60dvh] min-h-[340px]">
+        <Canvas
+          camera={{ position: [0, 15000, 19000], fov: 50, near: 100, far: 60000 }}
+          dpr={[1, TIER_CONFIGS[tier].maxPixelRatio]}
+        >
+          <QualitySampler tier={tier} onTierChange={setTier} />
+          {/*
+            A three-quarter view rather than the near-ground grazing angle that
+            foreshortened the relief away, with orbit so the parallax is
+            discoverable. Pan is off so the terrain cannot be dragged off-screen
+            with no way back; polar angle is clamped above the horizon so the
+            underside is never visible.
+          */}
+          <OrbitControls
+            target={[0, 500, 0]}
+            enableDamping
+            dampingFactor={0.08}
+            enablePan={false}
+            minDistance={6000}
+            maxDistance={45000}
+            minPolarAngle={0.2}
+            maxPolarAngle={Math.PI / 2.2}
+          />
+          {/*
+            Ambient stays low and one key light rakes in from the north-west at
+            ~45°: the standard hillshade geometry, where lit NW-facing slopes
+            and shadowed SE-facing slopes separate gentle relief that flat
+            lighting would average into nothing.
+          */}
+          <ambientLight intensity={0.4} />
+          <directionalLight position={[-8000, 11000, -8000]} intensity={1.4} />
+          <mesh geometry={geometry}>
+            {/* vertexColors drives the elevation tint; white keeps the ramp unmultiplied. */}
+            <meshStandardMaterial
+              vertexColors
+              color="#ffffff"
+              roughness={0.95}
+              metalness={0}
+            />
+          </mesh>
+        </Canvas>
+      </div>
+      <div className="space-y-1 border-t border-border px-4 py-3 text-center">
+        <p className="text-xs text-text-secondary">
+          Vertical exaggeration ×{VERTICAL_EXAGGERATION} — terrain from Copernicus DEM
+          GLO-30 at 30m
+        </p>
+        <p
+          data-testid="tier-disclosure"
+          aria-live="polite"
+          className="text-xs text-text-secondary"
+        >
+          Rendering quality: {tier} — adjusted to your device and connection
+        </p>
+      </div>
     </section>
   );
 }

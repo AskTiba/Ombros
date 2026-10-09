@@ -30,14 +30,18 @@ type DemBinaryGrid = {
 };
 
 vi.mock('@react-three/fiber', () => ({
-  Canvas: (props: { children?: unknown; dpr?: unknown }) => {
-    captured.canvasProps = { dpr: props.dpr };
+  Canvas: (props: { children?: unknown; dpr?: unknown; camera?: unknown }) => {
+    captured.canvasProps = { dpr: props.dpr, camera: props.camera };
     captured.children = props.children;
     return <div data-testid="r3f-canvas">{props.children as ReactNode}</div>;
   },
   useFrame: (callback: (state: unknown, delta: number) => void) => {
     captured.frameCallback = (delta: number) => callback({}, delta);
   },
+}));
+
+vi.mock('@react-three/drei', () => ({
+  OrbitControls: () => <div data-testid="orbit-controls" />,
 }));
 
 vi.mock('./deviceSignals', () => ({
@@ -198,5 +202,36 @@ describe('TerrainScene', () => {
     );
     expect(captured.canvasProps.dpr).toEqual([1, 1]);
     expect(vi.mocked(decimateGrid).mock.calls.at(-1)![1]).toBe(4);
+  });
+});
+
+describe('terrain presentation', () => {
+  it('frames the terrain from an elevated three-quarter view with orbit controls', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+
+    const camera = captured.canvasProps.camera as
+      { position?: [number, number, number] } | undefined;
+    expect(camera?.position?.[1]).toBeGreaterThan(10000);
+    expect(screen.getByTestId('orbit-controls')).toBeInTheDocument();
+  });
+
+  it('tints vertices by elevation so relief reads as topography', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+
+    const mesh = meshChild();
+    const geometry = mesh?.props.geometry as BufferGeometry;
+    expect(geometry).toBeDefined();
+
+    const color = geometry.getAttribute('color');
+    expect(color).toBeDefined();
+    expect(color?.count).toBe(geometry.getAttribute('position')?.count);
   });
 });

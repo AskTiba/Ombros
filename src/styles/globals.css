@@ -42,9 +42,13 @@
   --color-border: #d3e0e4;
   --color-border-strong: #b3c6cc;
 
-  /* Terrain (shared — the land does not retheme) */
-  --color-terrain-low: #2f3a2f;
-  --color-terrain-high: #6f7f63;
+  /* Terrain (shared — the land does not retheme). Read through a hypsometric
+     vertex ramp in `hypsometric.ts`, which pins itself to these hex values:
+     low ground reads as damp teal-green, hilltops as pale khaki. Both stay
+     mid-to-light so terrain reads as a legible object on a light page and
+     still separates from the blue water ramp that will sit on top of it. */
+  --color-terrain-low: #4a7d68;
+  --color-terrain-high: #ccd5a5;
 
   /*
    * Depth-class sequential ramp (ADR-003). Single hue: light = shallow,
@@ -180,6 +184,22 @@ body {
   border-radius: var(--radius-xl);
   background-color: var(--color-surface-raised);
   box-shadow: var(--shadow-sm);
+}
+
+/*
+ * Backdrop for the 3D terrain viewport. The WebGL canvas is transparent, so a
+ * soft lift from overlay to base keeps the terrain from floating in an
+ * undifferentiated page-coloured void — a horizon cue without painting a
+ * literal sky the elevation data does not support. Reads through var(), so it
+ * follows the OS theme with no per-component JS.
+ */
+.scene-viewport {
+  background-image: linear-gradient(
+    180deg,
+    var(--color-surface-overlay) 0%,
+    var(--color-surface-base) 55%,
+    var(--color-surface-raised) 100%
+  );
 }
 
 /*
