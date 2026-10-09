@@ -151,6 +151,12 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
 
   return (
     <section aria-label="3D terrain of Kampala" className="card overflow-hidden">
+      <div className="border-b border-border px-5 py-4">
+        <h3 className="text-base font-semibold text-text-primary">Kampala in 3D</h3>
+        <p className="mt-1 text-sm text-text-secondary">
+          Relief that shapes where water collects. Drag to orbit, scroll to zoom.
+        </p>
+      </div>
       {/*
         The viewport owns an explicit height so the R3F container can never
         collapse to zero, and the gradient behind the (transparent) canvas

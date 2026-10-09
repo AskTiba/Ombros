@@ -219,6 +219,17 @@ describe('terrain presentation', () => {
     expect(screen.getByTestId('orbit-controls')).toBeInTheDocument();
   });
 
+  it('names the scene as a feature and states how to explore it', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(
+      await screen.findByRole('heading', { level: 3, name: /kampala in 3d/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/drag to orbit/i)).toBeInTheDocument();
+  });
+
   it('tints vertices by elevation so relief reads as topography', async () => {
     serve(encodeDemBinary(rampGrid()));
 

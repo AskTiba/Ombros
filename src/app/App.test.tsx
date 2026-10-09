@@ -72,6 +72,20 @@ describe('App', () => {
     expect(header.className).toMatch(/sticky/);
   });
 
+  it('keeps the 3D scene between the accessible 2D map and the analysis tools', () => {
+    render(<App />);
+
+    const map = screen.getByRole('heading', { name: /baseline flood map/i });
+    const scene = screen.getByTestId('scene-fallback');
+    const drilldown = screen.getByRole('region', { name: /sub-county drilldown/i });
+
+    const follows = (node: Element, other: Node) =>
+      (node.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+    expect(follows(map, scene)).toBe(true);
+    expect(follows(scene, drilldown)).toBe(true);
+  });
+
   it('tells a first-time user what the tool is for', () => {
     render(<App />);
 

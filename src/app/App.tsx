@@ -58,10 +58,13 @@ export function App() {
             <Scenario2D scenario={BASELINE_SCENARIO} />
           </div>
         </section>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SubCountyDrilldown scenario={BASELINE_SCENARIO} />
-          {riskReport({ scenario: BASELINE_SCENARIO, shallowMaxM: 0.3, deepMinM: 0.4 })}
-        </div>
+        {/*
+          Mid-page rather than trailing the report: the 2D map stays the primary
+          accessible path directly above it (ADR-002), while the scene sits where
+          it reads as part of the analysis instead of an appendix. It still comes
+          after the decision numbers, so the page leads with capability, not
+          rendering (RISK-006).
+        */}
         <SceneGate
           scene={TerrainScene}
           fallback={<SceneFallback />}
@@ -71,6 +74,10 @@ export function App() {
             </p>
           }
         />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SubCountyDrilldown scenario={BASELINE_SCENARIO} />
+          {riskReport({ scenario: BASELINE_SCENARIO, shallowMaxM: 0.3, deepMinM: 0.4 })}
+        </div>
       </main>
     </div>
   );
