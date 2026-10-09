@@ -47,13 +47,28 @@ export function decimateGrid(grid: DemBinaryGrid, stride: number): DemBinaryGrid
     }
   }
 
+  // A loop, not Math.min(...samples): the high tier keeps all 479,678
+  // samples of the shipped DEM, and spreading that into one function call
+  // throws "Maximum call stack size exceeded" on V8 (other engines fail much
+  // earlier, nearer 65k). That fault fired at runtime only when the frame
+  // sampler promoted the tier, so the scene mounted, ran for a few seconds,
+  // then vanished into its fallback. Seed with the same ±Infinity the
+  // Math.min/Math.max forms return for an empty array.
+  let minElevationMeters = Infinity;
+  let maxElevationMeters = -Infinity;
+  for (let i = 0; i < samples.length; i += 1) {
+    const value = samples[i];
+    if (value < minElevationMeters) minElevationMeters = value;
+    if (value > maxElevationMeters) maxElevationMeters = value;
+  }
+
   return {
     samples,
     rows: rowIndices.length,
     cols: colIndices.length,
     widthMeters: grid.widthMeters,
     depthMeters: grid.depthMeters,
-    minElevationMeters: Math.min(...samples),
-    maxElevationMeters: Math.max(...samples),
+    minElevationMeters,
+    maxElevationMeters,
   };
 }

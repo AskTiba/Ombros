@@ -88,6 +88,37 @@ describe('decimateGrid', () => {
     expect(result.samples).toHaveLength(4);
   });
 
+  it('survives a full-resolution grid at stride 1 without blowing the call stack', () => {
+    // The high tier keeps every sample: the shipped DEM is 643 × 746 =
+    // 479,678 values. Re-deriving the band with Math.min(...samples) spreads
+    // that into one function call and throws "Maximum call stack size
+    // exceeded" — which surfaced as the terrain mounting, running for a few
+    // seconds, then being replaced by the fallback text the moment the frame
+    // sampler promoted the tier to high.
+    const rows = 746;
+    const cols = 643;
+    const samples = new Float32Array(rows * cols);
+    for (let i = 0; i < samples.length; i += 1) {
+      samples[i] = 1100 + (i % 200);
+    }
+    const source: DemBinaryGrid = {
+      samples,
+      rows,
+      cols,
+      widthMeters: (cols - 1) * 30,
+      depthMeters: (rows - 1) * 30,
+      minElevationMeters: 1100,
+      maxElevationMeters: 1299,
+    };
+
+    const result = decimateGrid(source, 1);
+
+    expect(result.rows).toBe(rows);
+    expect(result.cols).toBe(cols);
+    expect(result.minElevationMeters).toBe(1100);
+    expect(result.maxElevationMeters).toBe(1299);
+  });
+
   it('rejects strides below 1 and non-integer strides', () => {
     const source = makeGrid(5, 7, (row, col) => row + col);
 
