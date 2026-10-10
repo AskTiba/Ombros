@@ -69,7 +69,21 @@ export const MAX_CELL_SIZE_DRIFT = 0.005;
 /** Largest vertex count addressable by a 16-bit index buffer. */
 const MAX_UINT16_VERTICES = 65_536;
 
-const validate = (options: HeightfieldOptions): Required<HeightfieldOptions> => {
+/**
+ * Validates a grid before any geometry is built from it.
+ *
+ * Shared with `slab.ts`, which wraps the same grid into a solid: a slab built
+ * from an invalid grid would corrupt the model in exactly the ways this guards
+ * against, so it must not be a second, quieter copy of the same rules.
+ *
+ * @throws if rows/cols are not integers >= 2, the extent is not positive, the
+ * cells are not uniform, the samples length disagrees with the dimensions, any
+ * sample is non-finite, the exaggeration is not positive-finite, or the base
+ * elevation is not finite.
+ */
+export const validateHeightfield = (
+  options: HeightfieldOptions,
+): Required<HeightfieldOptions> => {
   const {
     samples,
     rows,
@@ -150,7 +164,7 @@ const validate = (options: HeightfieldOptions): Required<HeightfieldOptions> => 
  */
 export function buildHeightfieldGeometry(options: HeightfieldOptions): BufferGeometry {
   const { samples, rows, cols, extent, verticalExaggeration, baseElevationMeters } =
-    validate(options);
+    validateHeightfield(options);
 
   const vertexCount = rows * cols;
   const lastCol = cols - 1;

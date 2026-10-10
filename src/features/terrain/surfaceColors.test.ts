@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { buildHypsometricColors } from './hypsometric';
 import {
   CONTOUR_LINE_HEX,
+  SLAB_SURFACE_HEX,
   TERRAIN_AMBIENT,
   WATER_SURFACE_HEX,
   buildSurfaceColors,
@@ -165,5 +166,9 @@ describe('surface colour token contract', () => {
 
   it('pins the contour line to --color-terrain-contour', () => {
     expect(css).toContain(`--color-terrain-contour: ${CONTOUR_LINE_HEX};`);
+  });
+
+  it('pins the slab cut face to --color-terrain-slab', () => {
+    expect(css).toContain(`--color-terrain-slab: ${SLAB_SURFACE_HEX};`);
   });
 });

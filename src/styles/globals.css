@@ -58,6 +58,14 @@
      Pinned by `surfaceColors.test.ts`. */
   --color-terrain-contour: #f0ead8;
 
+  /* The cut face of the slab the model sits on (shared — the land does not
+     retheme). Warm stone-grey, deliberately outside both ends of the terrain
+     ramp in hue and lightness: a green-leaning slab would blur into the valley
+     it supports, and the slab's job is to say "this object was lifted out of
+     the ground". Darker than either ramp stop so the base reads as mass under
+     a lighter surface. Pinned by `surfaceColors.test.ts`. */
+  --color-terrain-slab: #6f655a;
+
   /*
    * Depth-class sequential ramp (ADR-003). Single hue: light = shallow,
    * saturated = deep. Shared meaning across themes — the data does not change

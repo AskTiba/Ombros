@@ -16,6 +16,7 @@ const captured = vi.hoisted(() => ({
   children: null as unknown,
   canvasProps: {} as Record<string, unknown>,
   frameCallback: null as ((delta: number) => void) | null,
+  orbitTarget: null as [number, number, number] | null,
   readDeviceSignals: vi.fn(() => ({})),
 }));
 
@@ -41,7 +42,10 @@ vi.mock('@react-three/fiber', () => ({
 }));
 
 vi.mock('@react-three/drei', () => ({
-  OrbitControls: () => <div data-testid="orbit-controls" />,
+  OrbitControls: (props: { target?: [number, number, number] }) => {
+    captured.orbitTarget = props.target ?? null;
+    return <div data-testid="orbit-controls" />;
+  },
 }));
 
 vi.mock('./deviceSignals', () => ({
@@ -76,6 +80,29 @@ const sceneChild = (type: string) =>
     .find((element: ReactElement) => element.type === type) as
     ReactElement<{ geometry?: BufferGeometry; children?: ReactNode }> | undefined;
 
+/** Every direct child of the canvas with the given element type. */
+const sceneChildren = (type: string) =>
+  Children.toArray(captured.children as ReactNode)
+    .filter(isValidElement)
+    .filter((element: ReactElement) => element.type === type) as ReactElement<{
+    geometry?: BufferGeometry;
+  }>[];
+
+/** Extremes of a geometry along Y, or a non-finite value when it has none. */
+const verticalExtent = (geometry?: BufferGeometry) => {
+  const positions = geometry?.getAttribute('position');
+  if (!positions)
+    return { highest: Number.NEGATIVE_INFINITY, lowest: Number.POSITIVE_INFINITY };
+  let highest = Number.NEGATIVE_INFINITY;
+  let lowest = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < positions.count; i += 1) {
+    const y = positions.getY(i);
+    if (y > highest) highest = y;
+    if (y < lowest) lowest = y;
+  }
+  return { highest, lowest };
+};
+
 const playFrames = (deltaSeconds: number, frames: number) => {
   act(() => {
     for (let i = 0; i < frames; i += 1) {
@@ -88,6 +115,7 @@ afterEach(() => {
   captured.children = null;
   captured.canvasProps = {};
   captured.frameCallback = null;
+  captured.orbitTarget = null;
   captured.readDeviceSignals.mockClear();
   captured.readDeviceSignals.mockReturnValue({});
   vi.mocked(decimateGrid).mockClear();
@@ -292,5 +320,36 @@ describe('terrain presentation', () => {
         .filter(isValidElement)
         .map((element: ReactElement) => element.type),
     ).toContain('lineBasicMaterial');
+  });
+
+  it('closes the terrain with a cut slab hanging beneath it', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+
+    const meshes = sceneChildren('mesh');
+    // Terrain first, slab second — `meshChild()` keeps targeting the terrain.
+    expect(meshes).toHaveLength(2);
+    const [terrain, slab] = meshes;
+
+    // The slab carries its own baked colour: there are no lights in the scene
+    // to give it form, so an unlit material would render it as a flat
+    // silhouette without one.
+    expect(slab.props.geometry?.getAttribute('color')).toBeDefined();
+
+    // Built from the same grid with the same base, so its floor sits below the
+    // lowest ground rather than level with it — otherwise the terrain would
+    // poke through the bottom of its own slab.
+    const slabExtent = verticalExtent(slab.props.geometry);
+    expect(slabExtent.lowest).toBeLessThan(verticalExtent(terrain.props.geometry).lowest);
+
+    // And framed on the whole model rather than on the surface alone. Targeting
+    // the relief pushed the base off the bottom of the canvas, where it showed
+    // as a rim a few pixels deep instead of a solid base.
+    const wholeModel =
+      (slabExtent.lowest + verticalExtent(terrain.props.geometry).highest) / 2;
+    expect(captured.orbitTarget?.[1]).toBeCloseTo(wholeModel, 3);
   });
 });

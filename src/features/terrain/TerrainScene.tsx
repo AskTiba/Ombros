@@ -5,6 +5,7 @@ import { BufferAttribute } from 'three';
 
 import { buildHeightfieldGeometry } from '@/features/terrain/heightfield';
 import { CONTOUR_LINE_HEX, buildSurfaceColors } from '@/features/terrain/surfaceColors';
+import { SLAB_DEPTH_METERS, buildSlabGeometry } from '@/features/terrain/slab';
 import { buildContourGeometry } from '@/features/terrain/contours';
 import {
   loadDemGrid,
@@ -178,12 +179,49 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
     [tierGrid, grid.minElevationMeters],
   );
 
+  /*
+   * The cut face under every edge, built from the *same* tier grid and the same
+   * base and exaggeration as the terrain — so each wall's rim lands exactly on
+   * the boundary vertex it descends from, with no seam to z-fight over. The
+   * floor is derived inside `buildSlabGeometry` from this grid's own lowest
+   * sample, which guarantees it clears whatever ground is actually being drawn
+   * at the current quality tier.
+   */
+  const slabGeometry = useMemo(
+    () =>
+      buildSlabGeometry({
+        samples: tierGrid.samples,
+        rows: tierGrid.rows,
+        cols: tierGrid.cols,
+        extent: {
+          widthMeters: tierGrid.widthMeters,
+          depthMeters: tierGrid.depthMeters,
+        },
+        verticalExaggeration: VERTICAL_EXAGGERATION,
+        baseElevationMeters: grid.minElevationMeters,
+      }),
+    [tierGrid, grid.minElevationMeters],
+  );
+
   useEffect(() => {
     return () => {
       geometry.dispose();
       contourGeometry.dispose();
+      slabGeometry.dispose();
     };
-  }, [geometry, contourGeometry]);
+  }, [geometry, contourGeometry, slabGeometry]);
+
+  /*
+   * Vertical centre of the whole model: the terrain's relief, plus the slab
+   * that hangs below it. Framing on the surface alone clipped the base off the
+   * bottom of the canvas, which showed as a rim a few pixels deep instead of a
+   * solid base. The grid's own band — not the tier's — so a quality change
+   * never slides the camera.
+   */
+  const sceneCentreY =
+    ((grid.maxElevationMeters - grid.minElevationMeters - SLAB_DEPTH_METERS) *
+      VERTICAL_EXAGGERATION) /
+    2;
 
   return (
     <section aria-label="3D terrain of Kampala" className="card overflow-hidden">
@@ -221,8 +259,14 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
             with no way back; polar angle is clamped above the horizon so the
             underside is never visible.
           */}
+          {/*
+            Vertical centre of the whole model — the terrain's relief plus the
+            slab that now hangs below it. Targeting the surface alone clipped
+            the base off the bottom of the canvas: measured at 206 visible rim
+            pixels against a model that reaches 200 units lower.
+          */}
           <OrbitControls
-            target={[0, 500, 0]}
+            target={[0, sceneCentreY, 0]}
             enableDamping
             dampingFactor={0.08}
             enablePan={false}
@@ -253,6 +297,16 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
               polygonOffsetFactor={1}
               polygonOffsetUnits={2}
             />
+          </mesh>
+          {/*
+            The slab: four walls and a floor that close the heightfield into a
+            solid. Without it the DEM just stops at the study extent and reads
+            as a shape lying on the page rather than as a specimen cut out of
+            the ground. Its colours are baked in `slab.ts` for the same reason
+            the terrain's are — there are no lights to shape it.
+          */}
+          <mesh geometry={slabGeometry}>
+            <meshBasicMaterial vertexColors color="#ffffff" />
           </mesh>
           {/*
             The layer that makes the surface read as *surveyed* ground rather

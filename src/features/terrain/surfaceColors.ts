@@ -83,6 +83,33 @@ export const WATER_SURFACE: NormalizedRgb = hexToLinearRgb(WATER_SURFACE_HEX);
 export const CONTOUR_LINE_HEX = '#f0ead8';
 
 /**
+ * The cut face of the slab the terrain sits on, from `--color-terrain-slab`.
+ * Pinned to the token by test.
+ *
+ * A warm stone-grey rather than a soil brown: the tint ramp already runs green
+ * to khaki, so any green-leaning slab would blur into the valley it supports.
+ * This sits outside both stops of the ramp in hue *and* in lightness, which is
+ * what makes the terrain read as a specimen lifted out of the ground rather
+ * than as a shape that simply stops.
+ *
+ * Like `WATER_SURFACE` this is linearised, because `slab.ts` writes it into a
+ * vertex colour attribute rather than handing it to a material.
+ */
+export const SLAB_SURFACE_HEX = '#6f655a';
+
+/**
+ * Brightness the slab's floor keeps relative to its rim.
+ *
+ * The scene has no lights — the terrain's shading is baked per-vertex — so a
+ * slab of one flat colour would render as a silhouette with no thickness at
+ * all. A top-to-bottom falloff is camera-independent: it survives any orbit,
+ * unlike a facing-based term that would need the light to follow the camera.
+ * At 0.5 the floor lands near `rgb(85, 77, 68)` on screen, dark enough to read
+ * as receding mass without crushing to black in the dark theme.
+ */
+export const SLAB_FLOOR_SHADE = 0.5;
+
+/**
  * How much of a tint survives at a given hillshade value.
  *
  * A single scalar rather than three multiplies, so the composition exists in
