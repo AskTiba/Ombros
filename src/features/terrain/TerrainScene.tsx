@@ -3,8 +3,9 @@ import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { BufferAttribute } from 'three';
 
-import { buildHypsometricColors } from '@/features/terrain/hypsometric';
 import { buildHeightfieldGeometry } from '@/features/terrain/heightfield';
+import { CONTOUR_LINE_HEX, buildSurfaceColors } from '@/features/terrain/surfaceColors';
+import { buildContourGeometry } from '@/features/terrain/contours';
 import {
   loadDemGrid,
   type DemLoadFailure,
@@ -132,22 +133,57 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
     built.setAttribute(
       'color',
       new BufferAttribute(
-        buildHypsometricColors(
-          tierGrid.samples,
-          grid.minElevationMeters,
-          grid.maxElevationMeters,
-        ),
+        // Hypsometric tint × hillshade, with water overridden — see
+        // `surfaceColors`. Shading is baked here rather than thrown by a lamp:
+        // the cartographic reading convention survives orbiting, where a
+        // directional light would re-light the terrain into whatever sun angle
+        // the camera happens to face.
+        buildSurfaceColors({
+          samples: tierGrid.samples,
+          rows: tierGrid.rows,
+          cols: tierGrid.cols,
+          cellXMeters: tierGrid.widthMeters / (tierGrid.cols - 1),
+          cellZMeters: tierGrid.depthMeters / (tierGrid.rows - 1),
+          minElevationMeters: grid.minElevationMeters,
+          maxElevationMeters: grid.maxElevationMeters,
+        }),
         3,
       ),
     );
     return built;
   }, [tierGrid, grid.minElevationMeters, grid.maxElevationMeters]);
 
+  /*
+   * Contours at the *tier's* resolution, not the DEM's, for two reasons.
+   * Lines built from the full grid would float off a decimated mesh, since the
+   * mesh's own surface at stride 4 is the 120m grid, not the 30m one — a
+   * contour has to lie on the thing it describes. And it keeps the cost
+   * proportional to what the device is already being asked to draw: measured
+   * on the shipped DEM, 34k/71k/147k line vertices at strides 4/2/1, against a
+   * mesh of 30k/120k/480k — lines are always the cheaper of the two.
+   */
+  const contourGeometry = useMemo(
+    () =>
+      buildContourGeometry({
+        samples: tierGrid.samples,
+        rows: tierGrid.rows,
+        cols: tierGrid.cols,
+        extent: {
+          widthMeters: tierGrid.widthMeters,
+          depthMeters: tierGrid.depthMeters,
+        },
+        verticalExaggeration: VERTICAL_EXAGGERATION,
+        baseElevationMeters: grid.minElevationMeters,
+      }),
+    [tierGrid, grid.minElevationMeters],
+  );
+
   useEffect(() => {
     return () => {
       geometry.dispose();
+      contourGeometry.dispose();
     };
-  }, [geometry]);
+  }, [geometry, contourGeometry]);
 
   return (
     <section aria-label="3D terrain of Kampala" className="card overflow-hidden">
@@ -167,6 +203,15 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
         <Canvas
           camera={{ position: [0, 15000, 19000], fov: 50, near: 100, far: 60000 }}
           dpr={[1, TIER_CONFIGS[tier].maxPixelRatio]}
+          /*
+            `flat` swaps r3f's default ACES filmic curve for no tone mapping at
+            all. ACES exists to compress HDR highlights into a displayable
+            range, which is right for a photoreal scene and wrong for a map:
+            it desaturates and darkens mid-tones, so the tokens pinned in
+            `globals.css` would never actually reach the screen. A survey
+            drawing is meant to reproduce its colours, not interpret them.
+          */
+          flat
         >
           <QualitySampler tier={tier} onTierChange={setTier} />
           {/*
@@ -187,22 +232,43 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
             maxPolarAngle={Math.PI / 2.2}
           />
           {/*
-            Ambient stays low and one key light rakes in from the north-west at
-            ~45°: the standard hillshade geometry, where lit NW-facing slopes
-            and shadowed SE-facing slopes separate gentle relief that flat
-            lighting would average into nothing.
+            No lights: the shading is already in the vertex colours. An unlit
+            material reads them straight through, which keeps the cartographic
+            hillshade fixed to the terrain instead of swinging with the camera
+            — and costs nothing per pixel, which is the budget that matters on
+            a mid-range Android over mobile data.
           */}
-          <ambientLight intensity={0.4} />
-          <directionalLight position={[-8000, 11000, -8000]} intensity={1.4} />
           <mesh geometry={geometry}>
-            {/* vertexColors drives the elevation tint; white keeps the ramp unmultiplied. */}
-            <meshStandardMaterial
+            {/*
+              `vertexColors` carries the baked tint × hillshade; white keeps it
+              unmultiplied. The polygon offset pushes the terrain a few depth
+              quanta *away* from the camera — the standard decal trick — so the
+              contours drawn on top of it win the depth test without being
+              lifted off the surface they describe.
+            */}
+            <meshBasicMaterial
               vertexColors
               color="#ffffff"
-              roughness={0.95}
-              metalness={0}
+              polygonOffset
+              polygonOffsetFactor={1}
+              polygonOffsetUnits={2}
             />
           </mesh>
+          {/*
+            The layer that makes the surface read as *surveyed* ground rather
+            than a shaped solid. One draw call for every contour in the model —
+            `buildContourGeometry` emits consecutive vertex pairs, which is
+            exactly what LineSegments consumes.
+
+            `renderOrder` matters: three.js sorts opaque objects front-to-back,
+            so without it the lines can be drawn *before* the terrain, write
+            their depth first, and then be overwritten by the surface sitting
+            at the same depth. Pinned by measurement — an out-of-order layer
+            showed 393px against 9,041 once ordered.
+          */}
+          <lineSegments geometry={contourGeometry} renderOrder={1}>
+            <lineBasicMaterial color={CONTOUR_LINE_HEX} />
+          </lineSegments>
         </Canvas>
       </div>
       <div className="space-y-1 border-t border-border px-4 py-3 text-center">

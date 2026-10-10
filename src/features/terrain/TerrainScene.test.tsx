@@ -60,8 +60,21 @@ const meshChild = () => {
   return elements
     .filter(isValidElement)
     .find((element: ReactElement) => element.type === 'mesh') as
-    ReactElement<{ geometry?: BufferGeometry }> | undefined;
+    ReactElement<{ geometry?: BufferGeometry; children?: ReactNode }> | undefined;
 };
+
+/** Finds one material by its element type inside the terrain mesh. */
+const meshMaterial = (type: string) =>
+  Children.toArray(meshChild()?.props.children)
+    .filter(isValidElement)
+    .find((element: ReactElement) => element.type === type);
+
+/** Finds a direct child of the canvas by its element type. */
+const sceneChild = (type: string) =>
+  Children.toArray(captured.children as ReactNode)
+    .filter(isValidElement)
+    .find((element: ReactElement) => element.type === type) as
+    ReactElement<{ geometry?: BufferGeometry; children?: ReactNode }> | undefined;
 
 const playFrames = (deltaSeconds: number, frames: number) => {
   act(() => {
@@ -91,7 +104,7 @@ describe('TerrainScene', () => {
     expect(screen.queryByTestId('r3f-canvas')).not.toBeInTheDocument();
   });
 
-  it('mounts a lit terrain mesh from the loaded DEM and discloses its exaggeration', async () => {
+  it('mounts a terrain mesh from the loaded DEM and discloses its exaggeration', async () => {
     serve(encodeDemBinary(rampGrid()));
 
     render(<TerrainScene />);
@@ -101,12 +114,6 @@ describe('TerrainScene', () => {
     const mesh = meshChild();
     expect(mesh).toBeDefined();
     expect(mesh?.props.geometry).toBeInstanceOf(BufferGeometry);
-
-    const types = Children.toArray(captured.children as ReactNode)
-      .filter(isValidElement)
-      .map((element: ReactElement) => element.type);
-    expect(types).toContain('ambientLight');
-    expect(types).toContain('directionalLight');
 
     expect(
       screen.getByText(new RegExp(`exaggeration ×${VERTICAL_EXAGGERATION}`, 'i')),
@@ -244,5 +251,46 @@ describe('terrain presentation', () => {
     const color = geometry.getAttribute('color');
     expect(color).toBeDefined();
     expect(color?.count).toBe(geometry.getAttribute('position')?.count);
+  });
+
+  it('shades from baked vertex colours rather than scene lights', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+
+    // A directional light would swing the hillshade around as the camera
+    // orbits; the shading lives in the colours, so nothing lights the scene.
+    const types = Children.toArray(captured.children as ReactNode)
+      .filter(isValidElement)
+      .map((element: ReactElement) => element.type);
+    expect(types).not.toContain('ambientLight');
+    expect(types).not.toContain('directionalLight');
+
+    expect(meshMaterial('meshBasicMaterial')).toBeDefined();
+    expect(meshMaterial('meshStandardMaterial')).toBeUndefined();
+  });
+
+  it('draws contour lines over the terrain so it reads as surveyed ground', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+
+    const segments = sceneChild('lineSegments');
+    expect(segments).toBeDefined();
+    // The fixture ramps 1100→1210, which crosses five 20m contour levels, so
+    // the geometry must carry real vertices rather than an empty buffer.
+    const positions = segments?.props.geometry?.getAttribute('position');
+    expect(positions?.count).toBeGreaterThan(0);
+    // Consecutive vertex pairs, which is what LineSegments draws.
+    expect((positions?.count ?? 0) % 2).toBe(0);
+    expect(
+      Children.toArray(segments?.props.children)
+        .filter(isValidElement)
+        .map((element: ReactElement) => element.type),
+    ).toContain('lineBasicMaterial');
   });
 });

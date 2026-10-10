@@ -50,6 +50,14 @@
   --color-terrain-low: #4a7d68;
   --color-terrain-high: #ccd5a5;
 
+  /* Contour lines over the terrain (shared — the land does not retheme).
+     Deliberately light: most of the extent sits at the ramp's dark-green end,
+     so a conventional dark contour would fall to ~1.2:1 against the majority
+     of the surface and disappear on exactly the flat ground the flood story is
+     about. A light line reads as annotation across the whole range.
+     Pinned by `surfaceColors.test.ts`. */
+  --color-terrain-contour: #f0ead8;
+
   /*
    * Depth-class sequential ramp (ADR-003). Single hue: light = shallow,
    * saturated = deep. Shared meaning across themes — the data does not change

@@ -1,3 +1,5 @@
+import { Color } from 'three';
+
 /**
  * Elevation → RGB vertex tint for the terrain mesh — hypsometric colouring.
  *
@@ -30,21 +32,40 @@
 export type NormalizedRgb = readonly [number, number, number];
 
 /**
- * Lowest-elevation stop, from `--color-terrain-low`. Normalised at module load
- * so a colour is a plain number by the time geometry is built.
+ * Lowest-elevation stop, from `--color-terrain-low`. Encoded at module load so
+ * a colour is a plain number by the time geometry is built.
  */
 export const HYPSON_VALLEY_HEX = '#4a7d68';
 
 /** Highest-elevation stop, from `--color-terrain-high`. */
 export const HYPSON_SUMMIT_HEX = '#ccd5a5';
 
-const hexToRgb = (hex: string): NormalizedRgb => {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
+/**
+ * Parses a CSS hex into **linear** sRGB — the encoding a vertex colour
+ * attribute has to hold.
+ *
+ * Three.js reads the numbers in a colour `BufferAttribute` as already living
+ * in its linear working space, and encodes to sRGB exactly once, on the way
+ * out to the screen. A raw hex division would therefore be encoded twice:
+ * the token's 0.2902 arrives on screen as ~0.53, the ramp lifts toward white,
+ * and the whole terrain flattens into pale pastel. Reaching for `THREE.Color`
+ * rather than a hand-written transfer function means this tracks whatever the
+ * renderer actually does, instead of drifting from it.
+ *
+ * This matters more than it looks. Material `color=` props need none of this —
+ * three encodes those itself — so only vertex attributes come through here.
+ *
+ * Pure and renderer-free by the same rule as `heightfield.ts`: `Color` is a
+ * value type, not a material, and jsdom has no WebGL either way.
+ */
+export const hexToLinearRgb = (hex: string): NormalizedRgb => {
+  const color = new Color(hex);
+  return [color.r, color.g, color.b];
 };
 
-export const HYPSON_VALLEY: NormalizedRgb = hexToRgb(HYPSON_VALLEY_HEX);
-export const HYPSON_SUMMIT: NormalizedRgb = hexToRgb(HYPSON_SUMMIT_HEX);
+export const HYPSON_VALLEY: NormalizedRgb = hexToLinearRgb(HYPSON_VALLEY_HEX);
+
+export const HYPSON_SUMMIT: NormalizedRgb = hexToLinearRgb(HYPSON_SUMMIT_HEX);
 
 /**
  * Builds one RGB triplet per sample, lerped from valley to summit by elevation.
