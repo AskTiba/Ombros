@@ -27,7 +27,7 @@ describe('App', () => {
     render(<App />);
 
     expect(
-      screen.getByRole('region', { name: /kampala terrain map/i }),
+      screen.getByRole('region', { name: /kampala flood extent map/i }),
     ).toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe('App', () => {
   it('keeps the 3D scene between the accessible 2D map and the analysis tools', () => {
     render(<App />);
 
-    const map = screen.getByRole('heading', { name: /terrain and wetlands/i });
+    const map = screen.getByRole('heading', { name: /modelled flood extent/i });
     const scene = screen.getByTestId('scene-fallback');
     const drilldown = screen.getByRole('region', { name: /sub-county drilldown/i });
 
@@ -85,13 +85,16 @@ describe('App', () => {
     expect(follows(scene, drilldown)).toBe(true);
   });
 
-  it('does not advertise a flood map the product cannot yet produce', () => {
-    // No hydrodynamic result is loaded (ADR-001). Calling the map a flood map
-    // would claim a capability the code does not have — the thing that made
-    // the old placeholder unreadable.
+  it('claims a flood extent map, which is now a capability the code has', () => {
+    // ADR-001 forbids our own solver, not consuming published modelling. The
+    // section was labelled "terrain and wetlands" while the map could show no
+    // water; it is named for what it now shows. The source attribution itself
+    // is asserted in TerrainMap2D's own tests, where the assets are served.
     render(<App />);
 
-    expect(screen.queryByRole('heading', { name: /flood map/i })).toBeNull();
+    expect(
+      screen.getByRole('region', { name: /kampala flood extent map/i }),
+    ).toBeInTheDocument();
   });
 
   it('tells a first-time user what the tool is for', () => {

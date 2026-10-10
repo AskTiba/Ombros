@@ -109,6 +109,75 @@ describe('renderTerrainMap', () => {
   });
 });
 
+describe('renderTerrainMap with a flood raster', () => {
+  it('paints flooded cells with the flood colour rather than the terrain', () => {
+    const grid = rampGrid();
+    const dry = renderTerrainMap(grid, 32);
+    const flags = new Uint8Array(grid.samples.length).fill(1);
+    const wet = renderTerrainMap(grid, 32, flags);
+
+    const distinct = new Set<string>();
+    for (let i = 0; i < wet.data.length; i += 4) {
+      distinct.add(`${wet.data[i]},${wet.data[i + 1]},${wet.data[i + 2]}`);
+    }
+    // A whole-canvas flood must not reproduce the dry palette pixel for pixel.
+    const dryColours = new Set<string>();
+    for (let i = 0; i < dry.data.length; i += 4) {
+      dryColours.add(`${dry.data[i]},${dry.data[i + 1]},${dry.data[i + 2]}`);
+    }
+    expect([...distinct].some((c) => !dryColours.has(c))).toBe(true);
+  });
+
+  it('lets the deepest class win, so the bands stack instead of overwriting', () => {
+    const grid = rampGrid();
+    const flags = new Uint8Array(grid.samples.length);
+    flags[0] = 0b001;
+    flags[1] = 0b011;
+    flags[2] = 0b111;
+    const map = renderTerrainMap(grid, 32, flags);
+
+    const at = (index: number) => {
+      const row = Math.floor(index / grid.cols);
+      const col = index % grid.cols;
+      // Map the source cell into output pixels the same way the renderer does.
+      const x = Math.floor((col + 0.5) * (map.width / grid.cols));
+      const y = Math.floor((row + 0.5) * (map.height / grid.rows));
+      const i = (y * map.width + x) * 4;
+      return [map.data[i], map.data[i + 1], map.data[i + 2]].join(',');
+    };
+
+    expect(at(0)).not.toBe(at(2));
+    expect(at(1)).not.toBe(at(2));
+  });
+
+  it('reports the share of the city in each depth class', () => {
+    // The legend has to be able to say how much of the study area each band
+    // covers — a colour with no quantity is decoration.
+    const grid = rampGrid();
+    const flags = new Uint8Array(grid.samples.length);
+    for (let i = 0; i < flags.length; i += 4) flags[i] = 1;
+    for (let i = 0; i < flags.length; i += 100) flags[i] = 4;
+
+    const shares = renderTerrainMap(grid, 32, flags).floodClassShares;
+    expect(shares[0] + shares[1] + shares[2]).toBeGreaterThan(0.2);
+    expect(shares[0]).toBeGreaterThan(0.1);
+    expect(shares[2]).toBeGreaterThan(0);
+  });
+
+  it('reports nothing flooded when given no raster', () => {
+    expect(renderTerrainMap(rampGrid(), 32).floodClassShares).toEqual([0, 0, 0]);
+  });
+
+  it('ignores a raster built on a different grid rather than misreading it', () => {
+    // The loader rejects this case; refusing to paint is the belt to that
+    // braces, and stops a short buffer walking off its end.
+    const grid = rampGrid();
+    const short = new Uint8Array(3);
+    expect(() => renderTerrainMap(grid, 32, short)).not.toThrow();
+    expect(renderTerrainMap(grid, 32, short).floodClassShares).toEqual([0, 0, 0]);
+  });
+});
+
 /**
  * A grid whose northern half is flat and low, so the water test flags it and
  * the southern half — equally flat, but high — stays land. Half wet is a

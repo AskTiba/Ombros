@@ -25,8 +25,8 @@
  */
 
 import type { DemBinaryGrid } from './demBinary';
-import { linearToSrgb } from './hypsometric';
-import { buildSurfaceColors } from './surfaceColors';
+import { hexToLinearRgb, linearToSrgb } from './hypsometric';
+import { FLOOD_BLEND, FLOOD_CLASS_HEX, buildSurfaceColors } from './surfaceColors';
 import { buildWaterMask } from './waterMask';
 
 /**
@@ -53,6 +53,8 @@ export interface TerrainMapPixels {
   waterShare: number;
   minElevationMeters: number;
   maxElevationMeters: number;
+  /** Share of cells in each depth class, lightest first. Zero when no flood raster was given. */
+  floodClassShares: [number, number, number];
 }
 
 /**
@@ -62,9 +64,20 @@ export interface TerrainMapPixels {
  * @param targetWidth - output width in pixels; height follows the extent's
  *   own aspect ratio so the map is never stretched.
  */
+/** Linear RGB of each depth class, lightest first. */
+const FLOOD_CLASS: ReadonlyArray<readonly [number, number, number]> = FLOOD_CLASS_HEX.map(
+  (hex) => hexToLinearRgb(hex),
+);
+
+/**
+ * @param floodFlags - optional raster from `loadFloodScenario`: one byte per
+ *   cell, bit 0/1/2 set for the 0.1 / 0.2 / 0.3 m classes. Must be the same
+ *   grid as the DEM — the loader is what enforces that.
+ */
 export function renderTerrainMap(
   grid: DemBinaryGrid,
   targetWidth: number,
+  floodFlags?: Uint8Array,
 ): TerrainMapPixels {
   const width = Math.max(1, Math.round(targetWidth));
   const height = Math.max(1, Math.round((width * grid.depthMeters) / grid.widthMeters));
@@ -101,12 +114,30 @@ export function renderTerrainMap(
     const row = Math.min(grid.rows - 1, Math.floor((y * grid.rows) / height));
     for (let x = 0; x < width; x += 1) {
       const col = Math.min(grid.cols - 1, Math.floor((x * grid.cols) / width));
-      const source = (row * grid.cols + col) * 3;
+      const sampleIndex = row * grid.cols + col;
+      const source = sampleIndex * 3;
       const pixel = (y * width + x) * 4;
+
+      let r = colors[source];
+      let g = colors[source + 1];
+      let b = colors[source + 2];
+
+      if (floodFlags && floodFlags.length === grid.samples.length) {
+        // Deepest class wins, so the bands stack rather than overwrite.
+        const flags = floodFlags[sampleIndex];
+        const band = flags & 4 ? 2 : flags & 2 ? 1 : flags & 1 ? 0 : -1;
+        if (band >= 0) {
+          const flood = FLOOD_CLASS[band];
+          r += (flood[0] - r) * FLOOD_BLEND;
+          g += (flood[1] - g) * FLOOD_BLEND;
+          b += (flood[2] - b) * FLOOD_BLEND;
+        }
+      }
+
       // Linear in, sRGB out: a canvas has no colour pipeline of its own.
-      data[pixel] = Math.round(linearToSrgb(colors[source]) * 255);
-      data[pixel + 1] = Math.round(linearToSrgb(colors[source + 1]) * 255);
-      data[pixel + 2] = Math.round(linearToSrgb(colors[source + 2]) * 255);
+      data[pixel] = Math.round(linearToSrgb(r) * 255);
+      data[pixel + 1] = Math.round(linearToSrgb(g) * 255);
+      data[pixel + 2] = Math.round(linearToSrgb(b) * 255);
       data[pixel + 3] = 255;
     }
   }
@@ -116,6 +147,17 @@ export function renderTerrainMap(
     if (waterMask[i] === 1) wet += 1;
   }
 
+  const floodShares: [number, number, number] = [0, 0, 0];
+  if (floodFlags && floodFlags.length === grid.samples.length) {
+    for (let i = 0; i < floodFlags.length; i += 1) {
+      const flags = floodFlags[i];
+      if (flags & 4) floodShares[2] += 1;
+      else if (flags & 2) floodShares[1] += 1;
+      else if (flags & 1) floodShares[0] += 1;
+    }
+    for (let c = 0; c < 3; c += 1) floodShares[c] /= floodFlags.length;
+  }
+
   return {
     data,
     width,
@@ -123,5 +165,6 @@ export function renderTerrainMap(
     waterShare: waterMask.length > 0 ? wet / waterMask.length : 0,
     minElevationMeters: grid.minElevationMeters,
     maxElevationMeters: grid.maxElevationMeters,
+    floodClassShares: floodShares,
   };
 }

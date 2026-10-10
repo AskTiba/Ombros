@@ -3,9 +3,12 @@ import { fileURLToPath, URL } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { DEPTH_CLASSES } from '@/features/flood/types';
+
 import { buildHypsometricColors } from './hypsometric';
 import {
   CONTOUR_LINE_HEX,
+  FLOOD_CLASS_HEX,
   SLAB_SURFACE_HEX,
   TERRAIN_AMBIENT,
   WATER_SURFACE_HEX,
@@ -170,5 +173,26 @@ describe('surface colour token contract', () => {
 
   it('pins the slab cut face to --color-terrain-slab', () => {
     expect(css).toContain(`--color-terrain-slab: ${SLAB_SURFACE_HEX};`);
+  });
+});
+
+describe('FLOOD_CLASS_HEX', () => {
+  it('has exactly one colour per published depth class', () => {
+    // The legend paints class i with colour i and the renderer paints bit i
+    // with the same colour. A length drift between the palette and the
+    // domain silently paints one band in another's colour, which is a wrong
+    // answer dressed as a map.
+    expect(FLOOD_CLASS_HEX).toHaveLength(DEPTH_CLASSES.length);
+  });
+
+  it('runs light to dark, matching shallow to deep', () => {
+    const luminance = (hex: string) => {
+      const n = parseInt(hex.slice(1), 16);
+      return ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255);
+    };
+    const values = FLOOD_CLASS_HEX.map(luminance);
+    for (let i = 1; i < values.length; i += 1) {
+      expect(values[i]).toBeLessThan(values[i - 1]);
+    }
   });
 });

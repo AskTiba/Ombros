@@ -57,6 +57,20 @@ import { buildWaterMask } from './waterMask';
 /** Share of the tint that survives even a fully unlit slope. */
 export const TERRAIN_AMBIENT = 0.45;
 
+/**
+ * Depth classes for the published flood extents, lightest to deepest.
+ *
+ * These are *classes*, not depths: the dataset publishes binary footprints at
+ * 0.1 / 0.2 / 0.3 m and nothing in between, so the map must never imply a
+ * point value it does not hold (ERR-001). Blended over the terrain rather than
+ * painted flat, so the relief underneath still reads — a planner needs to see
+ * that a flooded basin is a basin.
+ */
+export const FLOOD_CLASS_HEX = ['#a8d8e6', '#5cacc9', '#256f99'] as const;
+
+/** How much of the flood colour to use against the terrain beneath it. */
+export const FLOOD_BLEND = 0.72;
+
 /** Surface water, from `--color-water-200`. The hex is pinned to the token by test. */
 export const WATER_SURFACE_HEX = '#4aa8c0';
 

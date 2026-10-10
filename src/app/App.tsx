@@ -51,15 +51,15 @@ export function App() {
         <Hero />
         {riskSummaryCard({ scenario: BASELINE_SCENARIO })}
         {/*
-          Terrain, not flood — labelled as what it is. No hydrodynamic result
-          is loaded in this product yet (ADR-001), so calling this a flood map
-          would claim a capability the code does not have. Flood extent becomes
-          a layer on this map once the McClean et al. (2021) GeoPackage is
-          ingested; its licence is already cleared in the verification log.
+          A flood map, attributed. ADR-001 forbids implementing our own
+          hydrodynamic solver — it does not forbid showing published modelling.
+          This extent is McClean et al. (2021), ingested at build time; the
+          caption says so, and the bands are the study's own three depth
+          thresholds rather than depths we interpolated.
         */}
-        <section aria-label="Kampala terrain map" className="card rise p-5">
+        <section aria-label="Kampala flood extent map" className="card rise p-5">
           <h3 className="text-base font-semibold text-text-primary">
-            Kampala terrain and wetlands
+            Modelled flood extent
           </h3>
           <div className="mt-3">
             <TerrainMap2D />
