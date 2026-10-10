@@ -3,7 +3,7 @@ import { lazy } from 'react';
 import { SceneFallback } from '@/features/terrain/SceneFallback';
 import { SceneGate } from '@/features/terrain/SceneGate';
 import { createBaselineScenario } from '@/features/scenario/createBaselineScenario';
-import { Scenario2D } from '@/features/scenario/Scenario2D';
+import { TerrainMap2D } from '@/features/terrain/TerrainMap2D';
 import { riskSummaryCard } from '@/features/scenario/riskSummaryCard';
 import { SubCountyDrilldown } from '@/features/scenario/SubCountyDrilldown';
 import { riskReport } from '@/features/scenario/riskReport';
@@ -50,12 +50,19 @@ export function App() {
       >
         <Hero />
         {riskSummaryCard({ scenario: BASELINE_SCENARIO })}
-        <section aria-label="Flood extent baseline" className="card rise p-5">
+        {/*
+          Terrain, not flood — labelled as what it is. No hydrodynamic result
+          is loaded in this product yet (ADR-001), so calling this a flood map
+          would claim a capability the code does not have. Flood extent becomes
+          a layer on this map once the McClean et al. (2021) GeoPackage is
+          ingested; its licence is already cleared in the verification log.
+        */}
+        <section aria-label="Kampala terrain map" className="card rise p-5">
           <h3 className="text-base font-semibold text-text-primary">
-            Baseline flood map
+            Kampala terrain and wetlands
           </h3>
           <div className="mt-3">
-            <Scenario2D scenario={BASELINE_SCENARIO} />
+            <TerrainMap2D />
           </div>
         </section>
         {/*

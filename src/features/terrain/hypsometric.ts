@@ -65,6 +65,21 @@ export const hexToLinearRgb = (hex: string): NormalizedRgb => {
 
 export const HYPSON_VALLEY: NormalizedRgb = hexToLinearRgb(HYPSON_VALLEY_HEX);
 
+/**
+ * Inverse of the sRGB decode `hexToLinearRgb` performs.
+ *
+ * The 3D path never needs this: colours are handed to the GPU linear and the
+ * renderer encodes them on the way out. A 2D canvas has no such pipeline —
+ * `ImageData` bytes are displayed as-is — so the 2D map has to do the encode
+ * itself. Without it the map would render the *linear* values, which reads as
+ * a muddy, over-dark smear of the real terrain.
+ *
+ * The knee at 0.0031308 (linear) / 0.04045 (encoded) is the same pair of
+ * constants three.js uses, so the two paths land on the same bytes.
+ */
+export const linearToSrgb = (value: number): number =>
+  value <= 0.0031308 ? value * 12.92 : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+
 export const HYPSON_SUMMIT: NormalizedRgb = hexToLinearRgb(HYPSON_SUMMIT_HEX);
 
 /**

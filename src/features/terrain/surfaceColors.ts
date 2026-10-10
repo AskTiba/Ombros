@@ -150,6 +150,14 @@ export interface SurfaceColorOptions {
   minElevationMeters: number;
   /** Upper bound of the tint ramp. */
   maxElevationMeters: number;
+  /**
+   * Precomputed `buildWaterMask` output, if the caller already has one.
+   *
+   * The mask is a full pass over the grid, so a renderer that needs the wet
+   * fraction for a caption as well as the colours would otherwise pay for it
+   * twice. Optional: the 3D rebuild path still computes it itself.
+   */
+  waterMask?: Uint8Array;
 }
 
 /**
@@ -171,7 +179,8 @@ export function buildSurfaceColors(options: SurfaceColorOptions): Float32Array {
 
   const tint = buildHypsometricColors(samples, minElevationMeters, maxElevationMeters);
   const shade = buildHillshade(samples, rows, cols, cellXMeters, cellZMeters);
-  const water = buildWaterMask(samples, rows, cols, cellXMeters, cellZMeters);
+  const water =
+    options.waterMask ?? buildWaterMask(samples, rows, cols, cellXMeters, cellZMeters);
 
   const colors = new Float32Array(samples.length * 3);
 

@@ -58,3 +58,29 @@ export async function loadDemGrid(url: string = DEM_DATA_URL): Promise<DemLoadRe
     return { ok: false, reason: 'corrupt' };
   }
 }
+
+/**
+ * The DEM load, fetched at most once per session.
+ *
+ * The 3D scene and the 2D map are two views of the same grid, so they must not
+ * pull the ~960 kB payload twice on a metered mobile connection. Sharing the
+ * promise — not just the decoded result — also means the request is issued once
+ * rather than twice in parallel.
+ *
+ * Cached even on failure: a fresh clone without the gitignored binary would
+ * otherwise re-request a 404 from every consumer, and a page reload resets the
+ * cache anyway.
+ */
+let once: Promise<DemLoadResult> | null = null;
+
+export function loadDemGridOnce(url: string = DEM_DATA_URL): Promise<DemLoadResult> {
+  if (once === null) {
+    once = loadDemGrid(url);
+  }
+  return once;
+}
+
+/** Drops the cached load. Test-only; production never resets it. */
+export function resetDemGridCache(): void {
+  once = null;
+}

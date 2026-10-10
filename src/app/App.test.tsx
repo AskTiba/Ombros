@@ -23,12 +23,11 @@ describe('App', () => {
     expect(screen.queryByTestId('r3f-canvas')).not.toBeInTheDocument();
   });
 
-  it('shows the 2D scenario baseline for progressive enhancement', () => {
+  it('shows an accessible 2D map of the terrain for progressive enhancement', () => {
     render(<App />);
 
-    expect(screen.getByText(/Baseline: 30 min, 20 mm/i)).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: /Kampala flood extent/i }),
+      screen.getByRole('region', { name: /kampala terrain map/i }),
     ).toBeInTheDocument();
   });
 
@@ -75,7 +74,7 @@ describe('App', () => {
   it('keeps the 3D scene between the accessible 2D map and the analysis tools', () => {
     render(<App />);
 
-    const map = screen.getByRole('heading', { name: /baseline flood map/i });
+    const map = screen.getByRole('heading', { name: /terrain and wetlands/i });
     const scene = screen.getByTestId('scene-fallback');
     const drilldown = screen.getByRole('region', { name: /sub-county drilldown/i });
 
@@ -84,6 +83,15 @@ describe('App', () => {
 
     expect(follows(map, scene)).toBe(true);
     expect(follows(scene, drilldown)).toBe(true);
+  });
+
+  it('does not advertise a flood map the product cannot yet produce', () => {
+    // No hydrodynamic result is loaded (ADR-001). Calling the map a flood map
+    // would claim a capability the code does not have — the thing that made
+    // the old placeholder unreadable.
+    render(<App />);
+
+    expect(screen.queryByRole('heading', { name: /flood map/i })).toBeNull();
   });
 
   it('tells a first-time user what the tool is for', () => {
