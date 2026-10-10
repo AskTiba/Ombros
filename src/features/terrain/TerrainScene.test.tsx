@@ -17,6 +17,7 @@ const captured = vi.hoisted(() => ({
   canvasProps: {} as Record<string, unknown>,
   frameCallback: null as ((delta: number) => void) | null,
   orbitTarget: null as [number, number, number] | null,
+  orbitOnChange: null as ((event: unknown) => void) | null,
   readDeviceSignals: vi.fn(() => ({})),
 }));
 
@@ -42,8 +43,13 @@ vi.mock('@react-three/fiber', () => ({
 }));
 
 vi.mock('@react-three/drei', () => ({
-  OrbitControls: (props: { target?: [number, number, number] }) => {
+  OrbitControls: (props: {
+    target?: [number, number, number];
+    onChange?: (event: unknown) => void;
+    ref?: unknown;
+  }) => {
     captured.orbitTarget = props.target ?? null;
+    captured.orbitOnChange = props.onChange ?? null;
     return <div data-testid="orbit-controls" />;
   },
 }));
@@ -116,6 +122,7 @@ afterEach(() => {
   captured.canvasProps = {};
   captured.frameCallback = null;
   captured.orbitTarget = null;
+  captured.orbitOnChange = null;
   captured.readDeviceSignals.mockClear();
   captured.readDeviceSignals.mockReturnValue({});
   vi.mocked(decimateGrid).mockClear();
@@ -351,5 +358,30 @@ describe('terrain presentation', () => {
     const wholeModel =
       (slabExtent.lowest + verticalExtent(terrain.props.geometry).highest) / 2;
     expect(captured.orbitTarget?.[1]).toBeCloseTo(wholeModel, 3);
+  });
+
+  it('keeps the compass and the scale bar in step with the camera', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+    expect(screen.getByTestId('scale-bar-label')).toHaveTextContent('—');
+
+    // The mocked Canvas renders a div, not a real <canvas>, so there is no
+    // layout to measure and the bar correctly stays blank. What this pins is
+    // that a camera change reaches the overlay at all — and that it does so
+    // without re-rendering it through React state.
+    act(() => {
+      captured.orbitOnChange?.({
+        target: {
+          getAzimuthalAngle: () => Math.PI / 2,
+          object: { position: { distanceTo: () => 24000 } },
+          target: {},
+        },
+      });
+    });
+
+    expect(screen.getByTestId('north-arrow')).toHaveStyle({ transform: 'rotate(90deg)' });
   });
 });

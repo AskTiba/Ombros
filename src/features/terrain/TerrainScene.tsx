@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { BufferAttribute } from 'three';
+import { BufferAttribute, type PerspectiveCamera, type Vector3 } from 'three';
 
 import { buildHeightfieldGeometry } from '@/features/terrain/heightfield';
+import { KAMPALA_BOUNDS } from '@/lib/geo';
 import { CONTOUR_LINE_HEX, buildSurfaceColors } from '@/features/terrain/surfaceColors';
 import { SLAB_DEPTH_METERS, buildSlabGeometry } from '@/features/terrain/slab';
 import { buildContourGeometry } from '@/features/terrain/contours';
+import { metresPerPixel } from '@/features/terrain/orientation';
+import {
+  SceneOrientation,
+  type SceneOrientationHandle,
+} from '@/features/terrain/SceneOrientation';
 import {
   loadDemGrid,
   type DemLoadFailure,
@@ -107,10 +113,57 @@ function DemFailure({ reason }: { reason: DemLoadFailure }) {
   );
 }
 
+/**
+ * The slice of `OrbitControls` the orientation overlay reads, declared
+ * structurally. drei exposes its instance typed against `three-stdlib`, which
+ * is not a dependency of this project — only of drei — so naming it here would
+ * buy a build-time coupling to somebody else's transitive dependency.
+ */
+interface SceneCameraControls {
+  getAzimuthalAngle(): number;
+  object: { position: Vector3 };
+  target: Vector3;
+}
+
 function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
   const [tier, setTier] = useState<QualityTier>(() =>
     selectInitialTier(readDeviceSignals()),
   );
+
+  const orientationRef = useRef<SceneOrientationHandle>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * Keeps the compass and the scale bar honest about where the camera is.
+   *
+   * Writes straight into the overlay's DOM rather than through state: this
+   * runs on every pointer move and every inertia frame, and re-rendering the
+   * scene subtree that many times a second to turn one arrow is exactly the
+   * cost the mid-range-Android budget cannot absorb.
+   */
+  const syncOrientation = useCallback((controls: SceneCameraControls) => {
+    const orientation = orientationRef.current;
+    if (!orientation) return;
+
+    // The compass needs only the azimuth, so it is aimed before anything
+    // asks the viewport how big it is.
+    orientation.aimCompass(controls.getAzimuthalAngle());
+
+    const canvas = viewportRef.current?.querySelector('canvas');
+    if (!canvas || canvas.clientHeight === 0) return;
+
+    // The scene's camera is a perspective camera by construction — `Canvas`
+    // declares `fov` — but `OrbitControls` types `object` as the base camera,
+    // which carries no field of its own to read it from.
+    const camera = controls.object as PerspectiveCamera;
+    orientation.setScale(
+      metresPerPixel({
+        distanceMeters: camera.position.distanceTo(controls.target),
+        verticalFovDegrees: camera.fov,
+        viewportHeightPx: canvas.clientHeight,
+      }),
+    );
+  }, []);
 
   const tierGrid = useMemo(
     () => decimateGrid(grid, TIER_CONFIGS[tier].stride),
@@ -237,7 +290,7 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
         lifts the terrain out of a flat page-coloured void. It reads through
         var(), so the scene follows the OS theme with no JS.
       */}
-      <div className="scene-viewport relative h-[60dvh] min-h-[340px]">
+      <div ref={viewportRef} className="scene-viewport relative h-[60dvh] min-h-[340px]">
         <Canvas
           camera={{ position: [0, 15000, 19000], fov: 50, near: 100, far: 60000 }}
           dpr={[1, TIER_CONFIGS[tier].maxPixelRatio]}
@@ -266,6 +319,12 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
             pixels against a model that reaches 200 units lower.
           */}
           <OrbitControls
+            ref={(controls) => {
+              if (controls) syncOrientation(controls);
+            }}
+            onChange={(event) => {
+              if (event) syncOrientation(event.target);
+            }}
             target={[0, sceneCentreY, 0]}
             enableDamping
             dampingFactor={0.08}
@@ -324,6 +383,7 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
             <lineBasicMaterial color={CONTOUR_LINE_HEX} />
           </lineSegments>
         </Canvas>
+        <SceneOrientation bounds={KAMPALA_BOUNDS} ref={orientationRef} />
       </div>
       <div className="space-y-1 border-t border-border px-4 py-3 text-center">
         <p className="text-xs text-text-secondary">
