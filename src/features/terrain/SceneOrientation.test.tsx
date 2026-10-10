@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { KAMPALA_BOUNDS } from '@/lib/geo';
@@ -7,8 +7,11 @@ import { SceneOrientation, type SceneOrientationHandle } from './SceneOrientatio
 
 const setup = () => {
   const ref = createRef<SceneOrientationHandle>();
-  const { container } = render(<SceneOrientation bounds={KAMPALA_BOUNDS} ref={ref} />);
-  return { ref, overlay: container.firstElementChild as HTMLElement };
+  const onResetView = vi.fn();
+  const { container } = render(
+    <SceneOrientation bounds={KAMPALA_BOUNDS} onResetView={onResetView} ref={ref} />,
+  );
+  return { ref, onResetView, overlay: container.firstElementChild as HTMLElement };
 };
 
 describe('SceneOrientation', () => {
@@ -26,6 +29,16 @@ describe('SceneOrientation', () => {
     it('groups the annotations so they are announced as one region', () => {
       setup();
       expect(screen.getByRole('group', { name: /map orientation/i })).toBeInTheDocument();
+    });
+
+    it('offers the compass as a real button, so it is reachable by keyboard', () => {
+      // Pan means the user can end up anywhere, and the compass is the one way
+      // back. A control that only responds to a pointer would strand anyone
+      // navigating by keyboard — a WCAG 2.2 AA failure, not a nicety.
+      setup();
+      const button = screen.getByRole('button', { name: /reset the view/i });
+      expect(button).toHaveAttribute('type', 'button');
+      expect(button.tagName).toBe('BUTTON');
     });
 
     it('starts the scale bar blank rather than inventing a distance', () => {
@@ -87,10 +100,38 @@ describe('SceneOrientation', () => {
     });
   });
 
+  describe('resetting the view', () => {
+    it('returns the camera to its default framing when the compass is activated', () => {
+      const { onResetView } = setup();
+      fireEvent.click(screen.getByRole('button', { name: /reset the view/i }));
+      expect(onResetView).toHaveBeenCalledTimes(1);
+    });
+
+    it('activates from the keyboard as well as the pointer', () => {
+      // A native <button> gives Enter and Space for free — which is why this
+      // is not a div with a click handler.
+      const { onResetView } = setup();
+      const button = screen.getByRole('button', { name: /reset the view/i });
+      button.focus();
+      expect(button).toHaveFocus();
+      fireEvent.keyDown(button, { key: 'Enter' });
+      expect(onResetView).not.toHaveBeenCalled();
+      fireEvent.click(button);
+      expect(onResetView).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('staying out of the way', () => {
     it('cannot swallow the drag that orbits the scene', () => {
       const { overlay } = setup();
       expect(overlay).toHaveStyle({ pointerEvents: 'none' });
+    });
+
+    it('lets the compass through that shield, or the reset control would be dead', () => {
+      setup();
+      expect(screen.getByRole('button', { name: /reset the view/i })).toHaveStyle({
+        pointerEvents: 'auto',
+      });
     });
   });
 

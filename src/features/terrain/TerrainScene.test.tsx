@@ -2,10 +2,11 @@ import { act } from 'react';
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { BufferGeometry } from 'three';
 import { HttpResponse, http } from 'msw';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEM_DATA_URL } from '@/features/terrain/loadDem';
+import { boundsHeightMeters, boundsWidthMeters } from '@/lib/geo';
 import { server } from '@/test/msw';
 import { encodeDemBinary, rampGrid } from '@/test/demBinaryFixture';
 
@@ -18,6 +19,15 @@ const captured = vi.hoisted(() => ({
   frameCallback: null as ((delta: number) => void) | null,
   orbitTarget: null as [number, number, number] | null,
   orbitOnChange: null as ((event: unknown) => void) | null,
+  orbitProps: {} as Record<string, unknown>,
+  fakeControls: {
+    getAzimuthalAngle: () => 0,
+    object: {
+      position: { distanceTo: () => 24000, set: vi.fn(), x: 0, y: 15000, z: 19000 },
+    },
+    target: { x: 99999, y: 500, z: 99999, set: vi.fn() },
+    update: vi.fn(),
+  },
   readDeviceSignals: vi.fn(() => ({})),
 }));
 
@@ -46,10 +56,14 @@ vi.mock('@react-three/drei', () => ({
   OrbitControls: (props: {
     target?: [number, number, number];
     onChange?: (event: unknown) => void;
-    ref?: unknown;
+    ref?: ((controls: unknown) => void) | null;
+    enablePan?: boolean;
   }) => {
     captured.orbitTarget = props.target ?? null;
     captured.orbitOnChange = props.onChange ?? null;
+    captured.orbitProps = props as unknown as Record<string, unknown>;
+    // The scene hands its controls to a callback ref so it can reset the view.
+    props.ref?.(captured.fakeControls);
     return <div data-testid="orbit-controls" />;
   },
 }));
@@ -123,6 +137,10 @@ afterEach(() => {
   captured.frameCallback = null;
   captured.orbitTarget = null;
   captured.orbitOnChange = null;
+  captured.orbitProps = {};
+  captured.fakeControls.target.set = vi.fn();
+  captured.fakeControls.object.position.set = vi.fn();
+  captured.fakeControls.update = vi.fn();
   captured.readDeviceSignals.mockClear();
   captured.readDeviceSignals.mockReturnValue({});
   vi.mocked(decimateGrid).mockClear();
@@ -383,5 +401,51 @@ describe('terrain presentation', () => {
     });
 
     expect(screen.getByTestId('north-arrow')).toHaveStyle({ transform: 'rotate(90deg)' });
+  });
+
+  it('lets the user pan, so a zoomed-in view can be moved back into frame', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+    // Without pan the pivot is welded to the centre: zooming walks the camera
+    // at the centre while everything else leaves the frame with no way back.
+    expect(captured.orbitProps.enablePan).toBe(true);
+  });
+
+  it('keeps the pivot over the study extent when a pan runs off the edge', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+
+    // `fakeControls.target` starts far outside the extent on purpose.
+    const clamped = captured.fakeControls.target;
+    act(() => {
+      captured.orbitOnChange?.({ target: captured.fakeControls });
+    });
+
+    expect(Math.abs(clamped.x)).toBeLessThanOrEqual(boundsWidthMeters() / 2);
+    expect(Math.abs(clamped.z)).toBeLessThanOrEqual(boundsHeightMeters() / 2);
+  });
+
+  it('returns to the default framing when the compass is activated', async () => {
+    serve(encodeDemBinary(rampGrid()));
+
+    render(<TerrainScene />);
+
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
+    const controls = captured.fakeControls;
+    controls.update.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: /reset the view/i }));
+
+    // The ramp fixture spans 1100–1210m over a 50m slab at ×4, so the model
+    // centres at (110 - 50) * 4 / 2 = 120.
+    expect(controls.target.set).toHaveBeenCalledWith(0, 120, 0);
+    expect(controls.object.position.set).toHaveBeenCalledWith(0, 15000, 19000);
+    expect(controls.update).toHaveBeenCalledTimes(1);
   });
 });

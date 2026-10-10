@@ -62,10 +62,19 @@ export interface SceneOrientationHandle {
 export interface SceneOrientationProps {
   /** Geographic bounds of the study extent, in degrees. */
   bounds: SceneBounds;
+  /**
+   * Returns the camera to its default framing.
+   *
+   * The compass is the reset control, which is the convention on Google Earth
+   * and Cesium: once the user can pan, there has to be a one-gesture way back.
+   * Making it the compass rather than a separate button means the affordance
+   * is the thing they are already looking at to find north.
+   */
+  onResetView: () => void;
   ref?: Ref<SceneOrientationHandle>;
 }
 
-export function SceneOrientation({ bounds, ref }: SceneOrientationProps) {
+export function SceneOrientation({ bounds, onResetView, ref }: SceneOrientationProps) {
   const northRef = useRef<SVGGElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
@@ -99,39 +108,53 @@ export function SceneOrientation({ bounds, ref }: SceneOrientationProps) {
       role="group"
       aria-label="Map orientation"
     >
-      <svg
-        className="absolute right-3 top-3 text-text-primary"
-        width={COMPASS_SIZE}
-        height={COMPASS_SIZE}
-        viewBox="0 0 48 48"
-        role="img"
-        aria-label="North arrow — turns to match the camera"
+      {/*
+        A real button so it is reachable and activatable by keyboard — the
+        scene's only navigation control that is. `pointer-events: auto` is the
+        override that lifts it out of the overlay's own `none`; done inline
+        rather than as a utility class because a leak here would silently
+        disable the only way back out of a panned view.
+      */}
+      <button
+        type="button"
+        onClick={onResetView}
+        style={{ pointerEvents: 'auto' }}
+        className="absolute right-2 top-2 cursor-pointer rounded-full p-1 text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        aria-label="Reset the view to north up over the whole study extent"
       >
-        <circle cx="24" cy="24" r="21" className="fill-surface-raised" opacity="0.85" />
-        {/*
+        <svg
+          width={COMPASS_SIZE}
+          height={COMPASS_SIZE}
+          viewBox="0 0 48 48"
+          role="img"
+          aria-label="North arrow — turns to match the camera"
+        >
+          <circle cx="24" cy="24" r="21" className="fill-surface-raised" opacity="0.85" />
+          {/*
           Rotated by `update` rather than re-rendered. `transform-box: view-box`
           pins the origin to the SVG's own coordinate system, so `rotate` turns
           the rose about its centre instead of about the top-left corner of the
           page.
         */}
-        <g
-          ref={northRef}
-          data-testid="north-arrow"
-          style={{ transformBox: 'view-box', transformOrigin: '24px 24px' }}
-        >
-          <path d="M24 7 L29.5 27 L24 23.5 L18.5 27 Z" className="fill-current" />
-          <text
-            x="24"
-            y="40"
-            textAnchor="middle"
-            fontSize="13"
-            fontWeight="700"
-            className="fill-current"
+          <g
+            ref={northRef}
+            data-testid="north-arrow"
+            style={{ transformBox: 'view-box', transformOrigin: '24px 24px' }}
           >
-            N
-          </text>
-        </g>
-      </svg>
+            <path d="M24 7 L29.5 27 L24 23.5 L18.5 27 Z" className="fill-current" />
+            <text
+              x="24"
+              y="40"
+              textAnchor="middle"
+              fontSize="13"
+              fontWeight="700"
+              className="fill-current"
+            >
+              N
+            </text>
+          </g>
+        </svg>
+      </button>
 
       <div className="absolute inset-x-3 bottom-3 flex flex-col items-start gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="flex items-center gap-2">

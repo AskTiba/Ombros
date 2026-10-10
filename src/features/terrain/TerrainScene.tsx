@@ -10,6 +10,11 @@ import { SLAB_DEPTH_METERS, buildSlabGeometry } from '@/features/terrain/slab';
 import { buildContourGeometry } from '@/features/terrain/contours';
 import { metresPerPixel } from '@/features/terrain/orientation';
 import {
+  DEFAULT_CAMERA_POSITION,
+  clampTargetWithin,
+  studyExtentBounds,
+} from '@/features/terrain/sceneNavigation';
+import {
   SceneOrientation,
   type SceneOrientationHandle,
 } from '@/features/terrain/SceneOrientation';
@@ -123,6 +128,7 @@ interface SceneCameraControls {
   getAzimuthalAngle(): number;
   object: { position: Vector3 };
   target: Vector3;
+  update(): void;
 }
 
 function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
@@ -132,6 +138,7 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
 
   const orientationRef = useRef<SceneOrientationHandle>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<SceneCameraControls | null>(null);
 
   /*
    * Keeps the compass and the scale bar honest about where the camera is.
@@ -256,14 +263,6 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
     [tierGrid, grid.minElevationMeters],
   );
 
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-      contourGeometry.dispose();
-      slabGeometry.dispose();
-    };
-  }, [geometry, contourGeometry, slabGeometry]);
-
   /*
    * Vertical centre of the whole model: the terrain's relief, plus the slab
    * that hangs below it. Framing on the surface alone clipped the base off the
@@ -276,12 +275,67 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
       VERTICAL_EXAGGERATION) /
     2;
 
+  /*
+   * Keeps the pivot over the study extent. Panning is what lets a zoomed-in
+   * user bring an off-screen part of the city back into frame, but an
+   * unclamped pivot can be dragged until the model is entirely off-canvas —
+   * and the only way back would be finding the reset control with one thumb.
+   *
+   * The camera rides along with the correction. Snapping only the pivot would
+   * change the view direction and jerk the camera sideways every time it met a
+   * wall.
+   */
+  const clampAndSync = useCallback(
+    (controls: SceneCameraControls) => {
+      const pivot = controls.target;
+      const clamped = clampTargetWithin(pivot, studyExtentBounds());
+      const dx = clamped.x - pivot.x;
+      const dz = clamped.z - pivot.z;
+      if (dx !== 0 || dz !== 0) {
+        pivot.x = clamped.x;
+        pivot.z = clamped.z;
+        controls.object.position.x += dx;
+        controls.object.position.z += dz;
+      }
+      syncOrientation(controls);
+    },
+    [syncOrientation],
+  );
+
+  /*
+   * The compass doubles as the reset control — the convention on Google Earth
+   * and Cesium. Once the user can pan anywhere, there has to be a one-click
+   * way back to the framing the scene was composed for.
+   */
+  const resetView = useCallback(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.target.set(0, sceneCentreY, 0);
+    controls.object.position.set(
+      DEFAULT_CAMERA_POSITION.x,
+      DEFAULT_CAMERA_POSITION.y,
+      DEFAULT_CAMERA_POSITION.z,
+    );
+    controls.update();
+    syncOrientation(controls);
+  }, [sceneCentreY, syncOrientation]);
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      contourGeometry.dispose();
+      slabGeometry.dispose();
+    };
+  }, [geometry, contourGeometry, slabGeometry]);
+
   return (
     <section aria-label="3D terrain of Kampala" className="card overflow-hidden">
       <div className="border-b border-border px-5 py-4">
         <h3 className="text-base font-semibold text-text-primary">Kampala in 3D</h3>
         <p className="mt-1 text-sm text-text-secondary">
-          Relief that shapes where water collects. Drag to orbit, scroll to zoom.
+          Relief that shapes where water collects. Drag to orbit, scroll to zoom,
+          right-drag or two-finger drag to move across the city. Tap the compass to go
+          back.
         </p>
       </div>
       {/*
@@ -320,15 +374,22 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
           */}
           <OrbitControls
             ref={(controls) => {
-              if (controls) syncOrientation(controls);
+              controlsRef.current = controls;
+              if (controls) clampAndSync(controls);
             }}
             onChange={(event) => {
-              if (event) syncOrientation(event.target);
+              if (event) clampAndSync(event.target);
             }}
             target={[0, sceneCentreY, 0]}
             enableDamping
             dampingFactor={0.08}
-            enablePan={false}
+            /*
+              Pan is on: it is the move that slides the pivot itself, so a
+              zoomed-in user can bring an off-screen part of the city back
+              into frame rather than being stuck orbiting a fixed point.
+              Bounded by `clampAndSync`.
+            */
+            enablePan
             minDistance={6000}
             maxDistance={45000}
             minPolarAngle={0.2}
@@ -383,7 +444,11 @@ function TerrainCanvas({ grid }: { grid: DemBinaryGrid }) {
             <lineBasicMaterial color={CONTOUR_LINE_HEX} />
           </lineSegments>
         </Canvas>
-        <SceneOrientation bounds={KAMPALA_BOUNDS} ref={orientationRef} />
+        <SceneOrientation
+          bounds={KAMPALA_BOUNDS}
+          ref={orientationRef}
+          onResetView={resetView}
+        />
       </div>
       <div className="space-y-1 border-t border-border px-4 py-3 text-center">
         <p className="text-xs text-text-secondary">
